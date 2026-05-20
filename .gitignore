@@ -1,0 +1,30 @@
+# Ignore nested git repos
+app-gastos/.git/
+app-gastos/.git-temp/
+backend-gastos/.git/
+backend-gastos/.git-temp/
+
+# Node modules
+app-gastos/node_modules/
+backend-gastos/node_modules/
+
+# Expo and build artifacts
+app-gastos/.expo/
+app-gastos/.expo-shared/
+app-gastos/android/
+app-gastos/build/
+app-gastos/.gradle/
+
+# Nest build artifacts
+backend-gastos/dist/
+backend-gastos/node_modules/
+backend-gastos/npm-debug.log*
+backend-gastos/yarn-debug.log*
+backend-gastos/yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
