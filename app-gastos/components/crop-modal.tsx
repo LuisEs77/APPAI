@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { COLORES, RADIO, SOMBRAS } from '@/constants/colores';
 
 interface CropModalProps {
   visible: boolean;
@@ -23,17 +24,6 @@ interface CropModalProps {
 const { width, height } = Dimensions.get('window');
 const IMAGE_MAX_WIDTH = width * 0.85;
 
-/**
- * Modal de Recorte de Imágenes
- * 
- * Funcionalidades:
- * - Vista previa de la imagen
- * - Deslizadores para controlar el área de recorte (izq, der, arriba, abajo)
- * - Previsualización del recorte
- * - Botones para confirmar o cancelar
- * 
- * Nota: Expo-image-manipulator maneja el recorte a nivel nativo
- */
 export const CropModal: React.FC<CropModalProps> = ({
   visible,
   imageUri,
@@ -41,15 +31,13 @@ export const CropModal: React.FC<CropModalProps> = ({
   onCancel,
 }) => {
   const [loading, setLoading] = useState(false);
-  // Valores de recorte en píxeles (porcentaje del ancho/alto)
   const [cropValues, setCropValues] = useState({
-    left: 20,   // píxeles desde la izquierda
-    top: 20,    // píxeles desde arriba
-    width: IMAGE_MAX_WIDTH - 40,  // ancho del recorte
-    height: 400 - 40, // alto del recorte
+    left: 20,
+    top: 20,
+    width: IMAGE_MAX_WIDTH - 40,
+    height: 400 - 40,
   });
 
-  // Obtener dimensiones de la imagen
   const [imageDimensions, setImageDimensions] = useState({
     width: IMAGE_MAX_WIDTH,
     height: 400,
@@ -87,11 +75,10 @@ export const CropModal: React.FC<CropModalProps> = ({
 
       if (result.base64) {
         onCropComplete(result.base64);
-        Alert.alert('✅ Éxito', 'Imagen recortada y lista para procesar.');
+        Alert.alert('Exito', 'Imagen recortada y lista para procesar.');
       }
     } catch (error) {
-      Alert.alert('❌ Error', 'No se pudo recortar la imagen. Intenta nuevamente.');
-      console.error('Crop error:', error);
+      Alert.alert('Error', 'No se pudo recortar la imagen. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -105,16 +92,14 @@ export const CropModal: React.FC<CropModalProps> = ({
       onRequestClose={onCancel}
     >
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onCancel}>
-            <Ionicons name="chevron-back" size={28} color="#fff" />
+            <Ionicons name="chevron-back" size={28} color={COLORES.blanco} />
           </TouchableOpacity>
           <Text style={styles.title}>Recortar Imagen</Text>
           <View style={{ width: 28 }} />
         </View>
 
-        {/* Área de Previsualización */}
         <View style={styles.previewContainer}>
           <View
             style={[
@@ -137,7 +122,6 @@ export const CropModal: React.FC<CropModalProps> = ({
               onLoad={handleImageLoad}
             />
 
-            {/* Overlay del recorte - muestra dónde será recortado */}
             <View
               style={[
                 styles.cropOverlay,
@@ -154,16 +138,13 @@ export const CropModal: React.FC<CropModalProps> = ({
           </View>
         </View>
 
-        {/* Información */}
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>
-            👇 Desliza los controles para ajustar el área de recorte
+            Desliza los controles para ajustar el area de recorte
           </Text>
         </View>
 
-        {/* Controles (Sliders simplificados) */}
         <View style={styles.controlsContainer}>
-          {/* Control de izquierda/derecha */}
           <View style={styles.controlGroup}>
             <Text style={styles.controlLabel}>Izquierda</Text>
             <View style={styles.sliderContainer}>
@@ -175,7 +156,7 @@ export const CropModal: React.FC<CropModalProps> = ({
                   })
                 }
               >
-                <Ionicons name="remove-circle" size={24} color="#FF6B6B" />
+                <Ionicons name="remove-circle" size={24} color={COLORES.error} />
               </TouchableOpacity>
               <Text style={styles.sliderValue}>{cropValues.left}px</Text>
               <TouchableOpacity
@@ -186,12 +167,11 @@ export const CropModal: React.FC<CropModalProps> = ({
                   })
                 }
               >
-                <Ionicons name="add-circle" size={24} color="#4CAF50" />
+                <Ionicons name="add-circle" size={24} color={COLORES.exito} />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Control de arriba/abajo */}
           <View style={styles.controlGroup}>
             <Text style={styles.controlLabel}>Arriba</Text>
             <View style={styles.sliderContainer}>
@@ -203,7 +183,7 @@ export const CropModal: React.FC<CropModalProps> = ({
                   })
                 }
               >
-                <Ionicons name="remove-circle" size={24} color="#FF6B6B" />
+                <Ionicons name="remove-circle" size={24} color={COLORES.error} />
               </TouchableOpacity>
               <Text style={styles.sliderValue}>{cropValues.top}px</Text>
               <TouchableOpacity
@@ -214,16 +194,15 @@ export const CropModal: React.FC<CropModalProps> = ({
                   })
                 }
               >
-                <Ionicons name="add-circle" size={24} color="#4CAF50" />
+                <Ionicons name="add-circle" size={24} color={COLORES.exito} />
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Botones de Acción */}
         <View style={styles.buttonsContainer}>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
+            style={[styles.button, styles.cancelButton, SOMBRAS.leve]}
             onPress={onCancel}
             disabled={loading}
           >
@@ -231,12 +210,12 @@ export const CropModal: React.FC<CropModalProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.confirmButton]}
+            style={[styles.button, styles.confirmButton, SOMBRAS.leve]}
             onPress={handleCrop}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={COLORES.blanco} />
             ) : (
               <Text style={styles.buttonText}>Recortar</Text>
             )}
@@ -250,10 +229,10 @@ export const CropModal: React.FC<CropModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: COLORES.fondoOscuro,
   },
   header: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORES.error,
     paddingTop: 16,
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -262,7 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    color: '#fff',
+    color: COLORES.blanco,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -274,22 +253,22 @@ const styles = StyleSheet.create({
   },
   imageBorder: {
     borderWidth: 2,
-    borderColor: '#FF6B6B',
-    borderRadius: 12,
+    borderColor: COLORES.error,
+    borderRadius: RADIO.grande,
     overflow: 'hidden',
   },
   image: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORES.grisClaro,
   },
   cropOverlay: {
     position: 'absolute',
     borderWidth: 3,
-    borderColor: '#4CAF50',
+    borderColor: COLORES.exito,
   },
   cropBorder: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderColor: COLORES.exito,
     borderStyle: 'dashed',
   },
   infoContainer: {
@@ -298,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 107, 0.1)',
   },
   infoText: {
-    color: '#FF6B6B',
+    color: COLORES.error,
     fontSize: 13,
     textAlign: 'center',
   },
@@ -311,7 +290,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   controlLabel: {
-    color: '#fff',
+    color: COLORES.blanco,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -320,12 +299,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#2a2a3e',
-    borderRadius: 8,
+    borderRadius: RADIO.mediano,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   sliderValue: {
-    color: '#fff',
+    color: COLORES.blanco,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -338,18 +317,18 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: RADIO.mediano,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#666',
+    backgroundColor: COLORES.textoMedio,
   },
   confirmButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORES.error,
   },
   buttonText: {
-    color: '#fff',
+    color: COLORES.blanco,
     fontSize: 16,
     fontWeight: '600',
   },

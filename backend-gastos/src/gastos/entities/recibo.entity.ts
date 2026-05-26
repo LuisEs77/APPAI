@@ -5,20 +5,40 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
+  ForeignKey,
 } from 'typeorm';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 /**
  * Entidad Recibo: Representa un recibo de compra procesado
  * Almacena los datos extraídos por la IA de una imagen de factura
  *
  * Anti-Duplicidad: El campo imagen_hash es ÚNICO para evitar registros duplicados
+ * Multiusuario: Cada recibo pertenece a un Usuario especifico
  */
 @Entity('recibos')
 @Index(['imagen_hash'], { unique: true })
+@Index(['usuarioId', 'fecha'])
 @Index(['comercio', 'fecha', 'total'])
 export class Recibo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  /**
+   * Relacion ManyToOne con Usuario
+   * Cada recibo pertenece a un unico usuario
+   */
+  @ManyToOne(() => Usuario, (usuario) => usuario.recibos, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'usuarioId' })
+  usuario: Usuario;
+
+  @Column({ type: 'varchar', length: 36 })
+  usuarioId: string;
 
   /**
    * Hash SHA-256 de la imagen en Base64

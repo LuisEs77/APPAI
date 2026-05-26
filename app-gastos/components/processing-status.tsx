@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORES, RADIO, SOMBRAS } from '@/constants/colores';
 
 interface ProcessingState {
   total: number;
@@ -26,22 +27,12 @@ interface ProcessingStatusProps {
   onDismiss: () => void;
 }
 
-/**
- * Componente de Estado de Procesamiento
- * 
- * Muestra:
- * - Progreso general (número de imágenes procesadas)
- * - Contador de exitosas
- * - Contador de duplicadas
- * - Contador de errores
- * - Detalles de errores si existen
- */
 export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
   visible,
   state,
   onDismiss,
 }) => {
-  const progressPercentage = (state.processed / state.total) * 100;
+  const progressPercentage = state.total > 0 ? (state.processed / state.total) * 100 : 0;
 
   return (
     <Modal
@@ -51,7 +42,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
       onRequestClose={onDismiss}
     >
       <View style={styles.overlay}>
-        <View style={styles.container}>
+        <View style={[styles.container, SOMBRAS.profunda]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Procesando Recibos</Text>
@@ -75,9 +66,9 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
           {/* Loading Spinner */}
           {state.isLoading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF6B6B" />
+              <ActivityIndicator size="large" color={COLORES.azulClaro} />
               <Text style={styles.loadingText}>
-                Enviando imágenes al servidor...
+                Enviando imagenes al servidor...
               </Text>
             </View>
           )}
@@ -88,7 +79,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
               {/* Exitosas */}
               <View style={[styles.resultRow, styles.successRow]}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
+                  <Ionicons name="checkmark-circle" size={28} color={COLORES.exito} />
                 </View>
                 <View style={styles.resultContent}>
                   <Text style={styles.resultLabel}>Registradas Exitosamente</Text>
@@ -103,7 +94,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
                     <Ionicons
                       name="alert-circle"
                       size={28}
-                      color="#FF9800"
+                      color={COLORES.advertencia}
                     />
                   </View>
                   <View style={styles.resultContent}>
@@ -120,7 +111,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
                     <Ionicons
                       name="close-circle"
                       size={28}
-                      color="#FF6B6B"
+                      color={COLORES.error}
                     />
                   </View>
                   <View style={styles.resultContent}>
@@ -137,7 +128,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
                   {state.errorDetails.map((error: any, index: number) => (
                     <View key={index} style={styles.errorDetailItem}>
                       <Text style={styles.errorDetailText}>
-                        • Imagen {error.index + 1}: {error.error}
+                        - Imagen {error.index + 1}: {error.error}
                       </Text>
                     </View>
                   ))}
@@ -146,10 +137,10 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
             </ScrollView>
           )}
 
-          {/* Botón Cerrar */}
+          {/* Boton Cerrar */}
           {!state.isLoading && (
             <TouchableOpacity
-              style={styles.closeButton}
+              style={[styles.closeButton, SOMBRAS.leve]}
               onPress={onDismiss}
             >
               <Text style={styles.closeButtonText}>Entendido</Text>
@@ -170,21 +161,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: COLORES.blanco,
+    borderRadius: RADIO.grande,
     width: '100%',
     maxHeight: '80%',
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORES.azulClaro,
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: COLORES.blanco,
   },
   progressSection: {
     paddingHorizontal: 20,
@@ -192,18 +183,18 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: COLORES.grisClaro,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORES.azulClaro,
   },
   progressText: {
     fontSize: 13,
-    color: '#666',
+    color: COLORES.textoMedio,
     textAlign: 'center',
   },
   loadingContainer: {
@@ -214,7 +205,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: COLORES.textoMedio,
     textAlign: 'center',
   },
   resultsContainer: {
@@ -227,7 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 12,
-    borderRadius: 8,
+    borderRadius: RADIO.mediano,
     alignItems: 'center',
   },
   successRow: {
@@ -247,17 +238,17 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: 13,
-    color: '#666',
+    color: COLORES.textoMedio,
     marginBottom: 4,
   },
   resultCount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333',
+    color: COLORES.textoOscuro,
   },
   errorDetailsContainer: {
     backgroundColor: '#FFEBEE',
-    borderRadius: 8,
+    borderRadius: RADIO.mediano,
     paddingHorizontal: 12,
     paddingVertical: 12,
     marginTop: 8,
@@ -265,7 +256,7 @@ const styles = StyleSheet.create({
   errorDetailsTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#C62828',
+    color: COLORES.error,
     marginBottom: 8,
   },
   errorDetailItem: {
@@ -273,18 +264,18 @@ const styles = StyleSheet.create({
   },
   errorDetailText: {
     fontSize: 12,
-    color: '#D32F2F',
+    color: COLORES.error,
   },
   closeButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: COLORES.azulOscuro,
     marginHorizontal: 20,
     marginVertical: 16,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: RADIO.mediano,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#fff',
+    color: COLORES.blanco,
     fontSize: 16,
     fontWeight: '600',
   },

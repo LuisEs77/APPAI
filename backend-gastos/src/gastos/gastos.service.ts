@@ -1,177 +1,269 @@
-import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IaService } from '../ia/ia.service';
-import { DuplicidadService } from './services/duplicidad.service';
-import { ReciboProcesadoDto, ProcesarMultiplesRespuestaDto } from './dto/recibo-procesado.dto';
 import { Recibo } from './entities/recibo.entity';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 import * as ExcelJS from 'exceljs';
-import axios from 'axios';
 import FormData from 'form-data';
+import axios from 'axios';
 
+/**
+ * Servicio de Gastos (Recibos)
+ * Maneja logica de negocio para procesamiento de facturas
+ * Integrado con IA, deteccion de duplicados y filtros por usuario
+ */
 @Injectable()
 export class GastosService {
-  private readonly logger = new Logger(GastosService.name);
-
-  // Configuración de Telegram (Debe reemplazar estos valores con los de su Bot)
-  private readonly TELEGRAM_BOT_TOKEN = 'TU_TOKEN_DE_BOT_AQUI';
-  private readonly TELEGRAM_CHAT_ID = 'TU_CHAT_ID_AQUI';
+  private readonly logger = new Logger('GastosService');
+  private readonly TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+  private readonly TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 
   constructor(
     private readonly iaService: IaService,
-    private readonly duplicidadService: DuplicidadService,
     @InjectRepository(Recibo)
     private readonly reciboRepository: Repository<Recibo>,
   ) {}
 
   /**
-   * Procesa un único recibo (mantiene compatibilidad con Fase 1)
-   * @param imageBase64 - Imagen en Base64
-   * @returns Recibo procesado y guardado en BD
+   * Procesar una factura para usuario autenticado
+   * @param usuarioId ID del usuario
+   * @param imagenBase64 Imagen en formato base64
+   * @returns Recibo procesado
    */
-  async procesarRecibo(imageBase64: string): Promise<ReciboProcesadoDto> {
-    // 1. Validar anti-duplicidad
-    const imagenHash = await this.duplicidadService.validarDuplicidad(imageBase64);
+  async procesarFactura(usuarioId: string, imagenBase64: string): Promise<Recibo> {
+    this.logger.log(`Procesando factura para usuario ${usuarioId}`);
 
-    // 2. Enviar la imagen a la IA Local
-    const iaResult = await this.iaService.analizarImagen(imageBase64);
+    // 1. Procesar imagen con IA
+    const resultadoIa = await this.iaService.procesarFactura(imagenBase64);
 
-    // 3. Validación de Salida
-    this.logger.log('Validando la respuesta de la IA contra las reglas del sistema...');
+    // 2. Validar que no sea duplicado
+    const reciboExistente = await this.reciboRepository.findOne({
+      where: { imagen_hash: resultadoIa.imagenHash },
+    });
 
-    const reciboValidado = plainToInstance(ReciboProcesadoDto, iaResult);
-    const errores = await validate(reciboValidado);
-
-    if (errores.length > 0) {
-      this.logger.error('La IA devolvió un formato incorrecto o incompleto', JSON.stringify(errores));
-      throw new BadRequestException(
-        'Los datos extraídos están incompletos. Intenta tomar la foto con mejor iluminación.',
+    if (reciboExistente) {
+      throw new ConflictException(
+        'Esta factura ya fue procesada previamente. No se puede registrar duplicados.',
       );
     }
 
-    // 4. Guardar en la base de datos
-    const recibo = this.reciboRepository.create({
-      imagen_hash: imagenHash,
-      fecha: reciboValidado.fecha,
-      comercio: reciboValidado.comercio,
-      categoria: reciboValidado.categoria,
-      total: reciboValidado.total,
+    // 3. Crear recibo vinculado al usuario
+    const nuevoRecibo = this.reciboRepository.create({
+      usuarioId,
+      imagen_hash: resultadoIa.imagenHash,
+      fecha: resultadoIa.fecha,
+      comercio: resultadoIa.comercio,
+      categoria: resultadoIa.categoria,
+      total: resultadoIa.total,
       estado: 'Registrado',
     });
 
-    const reciboGuardado = await this.reciboRepository.save(recibo);
+    // 4. Guardar en BD
+    const reciboGuardado = await this.reciboRepository.save(nuevoRecibo);
 
     this.logger.log(
-      `✅ Éxito. Gasto registrado en BD: Q${reciboGuardado.total} en ${reciboGuardado.comercio}.`,
+      `Factura procesada: ${reciboGuardado.comercio} Q${reciboGuardado.total}`,
     );
 
-    // 5. Convertir entidad a DTO para respuesta
-    return plainToInstance(ReciboProcesadoDto, reciboGuardado);
+    return reciboGuardado;
   }
 
   /**
-   * Procesa múltiples recibos de forma segura
-   * Valida anti-duplicidad para cada uno y devuelve un resumen detallado
-   *
-   * @param images - Array de imágenes en Base64
-   * @returns Resumen con exitosos, duplicados y errores
+   * Obtener todos los recibos del usuario autenticado
+   * @param usuarioId ID del usuario
+   * @param filtros Filtros opcionales (fecha, categoria)
+   * @returns Lista de recibos
    */
-  async procesarMultiplesRecibos(
-    images: string[],
-  ): Promise<ProcesarMultiplesRespuestaDto> {
-    this.logger.log(`🔄 Iniciando procesamiento de ${images.length} imágenes...`);
+  async obtenerRecibos(
+    usuarioId: string,
+    filtros?: {
+      fechaInicio?: string;
+      fechaFin?: string;
+      categoria?: string;
+    },
+  ): Promise<Recibo[]> {
+    const query = this.reciboRepository.createQueryBuilder('recibo');
+    query.where('recibo.usuarioId = :usuarioId', { usuarioId });
 
-    const respuesta: ProcesarMultiplesRespuestaDto = {
-      exitosos: [],
-      duplicados: [],
-      errores: [],
-      resumen: {
-        total_procesados: images.length,
-        total_exitosos: 0,
-        total_duplicados: 0,
-        total_errores: 0,
-      },
-    };
-
-    // Procesar cada imagen
-    for (let index = 0; index < images.length; index++) {
-      const imageBase64 = images[index];
-
-      try {
-        // Validar anti-duplicidad
-        let imagenHash: string;
-        try {
-          imagenHash = await this.duplicidadService.validarDuplicidad(imageBase64);
-        } catch (conflictError) {
-          if (conflictError instanceof ConflictException) {
-            this.logger.warn(`⚠️ Imagen ${index + 1}: Duplicada`);
-            respuesta.duplicados.push({
-              index,
-              razon: 'El recibo ya existe en la base de datos',
-              detalles: conflictError.getResponse(),
-            });
-            respuesta.resumen.total_duplicados++;
-            continue;
-          }
-          throw conflictError;
-        }
-
-        // Enviar a IA
-        const iaResult = await this.iaService.analizarImagen(imageBase64);
-
-        // Validar DTO
-        const reciboValidado = plainToInstance(ReciboProcesadoDto, iaResult);
-        const errores = await validate(reciboValidado);
-
-        if (errores.length > 0) {
-          this.logger.error(
-            `❌ Imagen ${index + 1}: Validación fallida`,
-            JSON.stringify(errores),
-          );
-          respuesta.errores.push({
-            index,
-            error: 'Los datos extraídos están incompletos o mal formateados',
-          });
-          respuesta.resumen.total_errores++;
-          continue;
-        }
-
-        // Guardar en BD
-        const recibo = this.reciboRepository.create({
-          imagen_hash: imagenHash,
-          fecha: reciboValidado.fecha,
-          comercio: reciboValidado.comercio,
-          categoria: reciboValidado.categoria,
-          total: reciboValidado.total,
-          estado: 'Registrado',
-        });
-
-        const reciboGuardado = await this.reciboRepository.save(recibo);
-        respuesta.exitosos.push(plainToInstance(ReciboProcesadoDto, reciboGuardado));
-        respuesta.resumen.total_exitosos++;
-
-        this.logger.log(
-          `✅ Imagen ${index + 1}: Registrada (${reciboGuardado.comercio} - Q${reciboGuardado.total})`,
-        );
-      } catch (error) {
-        this.logger.error(`❌ Imagen ${index + 1}: Error inesperado`, error.message);
-        respuesta.errores.push({
-          index,
-          error: error.message || 'Error desconocido',
-        });
-        respuesta.resumen.total_errores++;
-      }
+    // Aplicar filtros
+    if (filtros?.fechaInicio && filtros?.fechaFin) {
+      query.andWhere('recibo.fecha BETWEEN :fechaInicio AND :fechaFin', {
+        fechaInicio: filtros.fechaInicio,
+        fechaFin: filtros.fechaFin,
+      });
     }
 
+    if (filtros?.categoria) {
+      query.andWhere('recibo.categoria = :categoria', {
+        categoria: filtros.categoria,
+      });
+    }
+
+    query.orderBy('recibo.fecha', 'DESC');
+
+    return await query.getMany();
+  }
+
+  /**
+   * Obtener un recibo especifico del usuario
+   * @param usuarioId ID del usuario
+   * @param reciboId ID del recibo
+   * @returns Recibo
+   */
+  async obtenerRecibo(usuarioId: string, reciboId: string): Promise<Recibo> {
+    const recibo = await this.reciboRepository.findOne({
+      where: {
+        id: reciboId,
+        usuarioId,
+      },
+    });
+
+    if (!recibo) {
+      throw new NotFoundException(
+        'Recibo no encontrado o no tienes permisos para acceder',
+      );
+    }
+
+    return recibo;
+  }
+
+  /**
+   * Obtener estadisticas de gastos del usuario
+   * @param usuarioId ID del usuario
+   * @param mes Mes (1-12)
+   * @param anio Anio (YYYY)
+   * @returns Estadisticas agregadas
+   */
+  async obtenerEstadisticas(
+    usuarioId: string,
+    mes: number,
+    anio: number,
+  ): Promise<any> {
+    // Construir fechas del mes
+    const fechaInicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
+    const fechaFin = new Date(anio, mes, 0);
+    const fechaFinStr = fechaFin.toISOString().split('T')[0];
+
+    const recibos = await this.obtenerRecibos(usuarioId, {
+      fechaInicio,
+      fechaFin: fechaFinStr,
+    });
+
+    // Calcular estadisticas
+    const totalGastado = recibos.reduce((sum, r) => sum + Number(r.total), 0);
+    const cantidadTransacciones = recibos.length;
+
+    // Agrupar por categoria
+    const porCategoria = {};
+    recibos.forEach((recibo) => {
+      if (!porCategoria[recibo.categoria]) {
+        porCategoria[recibo.categoria] = {
+          cantidad: 0,
+          total: 0,
+        };
+      }
+      porCategoria[recibo.categoria].cantidad++;
+      porCategoria[recibo.categoria].total += Number(recibo.total);
+    });
+
+    return {
+      periodo: `${anio}-${String(mes).padStart(2, '0')}`,
+      totalGastado: parseFloat(totalGastado.toFixed(2)),
+      cantidadTransacciones,
+      promedioPorTransaccion: parseFloat(
+        (totalGastado / cantidadTransacciones || 0).toFixed(2),
+      ),
+      porCategoria,
+    };
+  }
+
+  /**
+   * Eliminar recibo del usuario
+   * @param usuarioId ID del usuario
+   * @param reciboId ID del recibo a eliminar
+   */
+  async eliminarRecibo(usuarioId: string, reciboId: string): Promise<void> {
+    const recibo = await this.obtenerRecibo(usuarioId, reciboId);
+
+    await this.reciboRepository.remove(recibo);
+
+    this.logger.log(`Recibo ${reciboId} eliminado`);
+  }
+
+  /**
+   * Generar reporte Excel para usuario
+   * @param usuarioId ID del usuario
+   * @param mes Mes del reporte
+   * @param anio Anio del reporte
+   * @returns Buffer con archivo Excel
+   */
+  async generarReporteExcel(
+    usuarioId: string,
+    mes: number,
+    anio: number,
+  ): Promise<Buffer> {
     this.logger.log(
-      `📊 Resumen: ${respuesta.resumen.total_exitosos} exitosos, ` +
-        `${respuesta.resumen.total_duplicados} duplicados, ` +
-        `${respuesta.resumen.total_errores} errores`,
+      `Generando reporte Excel para usuario ${usuarioId} (${anio}-${mes})`,
     );
 
-    return respuesta;
+    // Obtener recibos del periodo
+    const fechaInicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
+    const fechaFin = new Date(anio, mes, 0);
+    const fechaFinStr = fechaFin.toISOString().split('T')[0];
+
+    const recibos = await this.obtenerRecibos(usuarioId, {
+      fechaInicio,
+      fechaFin: fechaFinStr,
+    });
+
+    // Crear workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Historial de Gastos');
+
+    // Configurar columnas
+    worksheet.columns = [
+      { header: 'Fecha', key: 'fecha', width: 12 },
+      { header: 'Comercio', key: 'comercio', width: 25 },
+      { header: 'Categoria', key: 'categoria', width: 15 },
+      { header: 'Total (Q)', key: 'total', width: 12 },
+      { header: 'Estado', key: 'estado', width: 12 },
+    ];
+
+    // Agregar estilos al encabezado
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '003366' } };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Agregar datos
+    let totalGastado = 0;
+    recibos.forEach((recibo) => {
+      worksheet.addRow({
+        fecha: recibo.fecha,
+        comercio: recibo.comercio,
+        categoria: recibo.categoria,
+        total: Number(recibo.total),
+        estado: recibo.estado,
+      });
+      totalGastado += Number(recibo.total);
+    });
+
+    // Agregar fila de totales
+    const filaTotal = worksheet.addRow({
+      fecha: 'TOTAL:',
+      total: totalGastado,
+    });
+    filaTotal.font = { bold: true };
+    filaTotal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' } };
+
+    // Convertir a buffer
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 
   /**
@@ -181,7 +273,7 @@ export class GastosService {
     return await this.reciboRepository.find({
       order: {
         created_at: 'DESC',
-      },
+      } as any,
     });
   }
 
@@ -210,7 +302,7 @@ export class GastosService {
     worksheet.columns = [
       { header: 'Fecha', key: 'fecha', width: 15 },
       { header: 'Comercio', key: 'comercio', width: 25 },
-      { header: 'Categoría', key: 'categoria', width: 20 },
+      { header: 'Categoria', key: 'categoria', width: 20 },
       { header: 'Total (Q)', key: 'total', width: 15 },
       { header: 'Estado', key: 'estado', width: 15 },
       { header: 'Registrado', key: 'created_at', width: 20 },
@@ -248,7 +340,7 @@ export class GastosService {
     });
     formData.append(
       'caption',
-      `📊 Reporte financiero automatizado generado por el sistema.\n` +
+      `Reporte financiero automatizado generado por el sistema.\n` +
         `Total de recibos: ${recibos.length}\n` +
         `Total gastado: Q${recibos.reduce((sum, r) => sum + Number(r.total), 0).toFixed(2)}`,
     );
@@ -260,15 +352,15 @@ export class GastosService {
         formData,
         { headers: formData.getHeaders() },
       );
-      this.logger.log('✅ Archivo enviado exitosamente a Telegram.');
+      this.logger.log('Archivo enviado exitosamente a Telegram.');
       return {
         success: true,
-        message: 'Reporte generado y enviado con éxito.',
+        message: 'Reporte generado y enviado con exito.',
         total_recibos: recibos.length,
       };
     } catch (error) {
-      this.logger.error('❌ Error en la transmisión hacia Telegram', error.message);
-      throw new Error('Fallo en el servicio de integración con Telegram.');
+      this.logger.error('Error en la transmision hacia Telegram', error.message);
+      throw new Error('Fallo en el servicio de integracion con Telegram.');
     }
   }
 }

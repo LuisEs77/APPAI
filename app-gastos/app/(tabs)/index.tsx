@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ImageCarousel } from '../../components/image-carousel';
 import { CropModal } from '../../components/crop-modal';
 import { ProcessingStatus } from '../../components/processing-status';
-import { v4 as uuidv4 } from 'react-native-uuid';
+import uuid from 'react-native-uuid';
 
 // Asegúrate de que esta URL no tenga ".app" al final y apunte a tu Ngrok
 const URL_BACKEND = 'https://vintage-visitor-wrench.ngrok-free.dev/gastos';
@@ -61,56 +61,75 @@ export default function GastosApp() {
   });
 
   /**
-   * Tomar foto con cámara
+   * Tomar foto con cámara (Versión Segura)
    */
   const tomarFoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permiso denegado', 'Se necesita acceso a la cámara.');
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permiso denegado', 'Se necesita acceso a la cámara.');
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      base64: true,
-      quality: 0.7,
-      aspect: [4, 3],
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        base64: true,
+        quality: 0.5, // 💡 Bajamos a 0.5: Las fotos son más ligeras y el Base64 no satura la memoria RAM
+        aspect: [4, 3],
+      });
 
-    if (!result.canceled && result.assets[0].base64) {
-      const newImage: ImageItem = {
-        uri: result.assets[0].uri,
-        base64: result.assets[0].base64,
-        id: uuidv4(),
-      };
-      setImages([...images, newImage]);
-      setCurrentImageIndex(images.length);
+      // 💡 Condición más flexible para evitar que falle en silencio
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        
+        const newImage: ImageItem = {
+          uri: asset.uri,
+          base64: asset.base64 || '', // Si tarda en llegar, evitamos el crash
+          id: Date.now().toString(), // 💡 100% nativo y seguro, sin librerías externas
+        };
+
+        // 💡 Actualización funcional pura: Fuerza a React a renderizar la pantalla
+        setImages((prevImages) => {
+          const nuevas = [...prevImages, newImage];
+          setCurrentImageIndex(nuevas.length - 1); // Enfocamos la imagen nueva
+          return nuevas;
+        });
+      }
+    } catch (error) {
+      console.error("Error en cámara: ", error);
+      Alert.alert("Error", "No se pudo procesar la fotografía.");
     }
   };
 
   /**
-   * Seleccionar foto de galería
+   * Seleccionar foto de galería (Versión Segura)
    */
   const seleccionarDelGaleria = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permiso denegado', 'Se necesita acceso a la galería.');
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permiso denegado', 'Se necesita acceso a la galería.');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
-      quality: 0.7,
-      aspect: [4, 3],
-      allowsMultiple: true, // Permitir múltiples imágenes
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
+        quality: 0.5,
+        aspect: [4, 3],
+        allowsMultipleSelection: true,
+      });
 
-    if (!result.canceled) {
-      const nuevasImagenes = result.assets.map((asset) => ({
-        uri: asset.uri,
-        base64: asset.base64 || '',
-        id: uuidv4(),
-      }));
-      setImages([...images, ...nuevasImagenes]);
+      if (!result.canceled && result.assets) {
+        const nuevasImagenes = result.assets.map((asset, index) => ({
+          uri: asset.uri,
+          base64: asset.base64 || '',
+          id: `${Date.now().toString()}-${index}`, // IDs únicos basados en tiempo
+        }));
+
+        setImages((prevImages) => [...prevImages, ...nuevasImagenes]);
+      }
+    } catch (error) {
+      console.error("Error en galería: ", error);
+      Alert.alert("Error", "No se pudo cargar la galería.");
     }
   };
 

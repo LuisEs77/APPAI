@@ -1,24 +1,50 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useAutenticacion } from '@/hooks/use-autenticacion';
+import { ProveedorAutenticacion } from '@/context/auth-context';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+/**
+ * Layout raíz que maneja la navegacion entre rutas autenticadas y no autenticadas
+ */
+function RootLayoutContent() {
+  const { usuario, cargando, restaurarSesion } = useAutenticacion();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+  useEffect(() => {
+    // Restaurar sesión al iniciar la app
+    restaurarSesion();
+  }, []);
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  if (cargando) {
+    // Mostrar splash screen mientras se carga
+    return <Stack />;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        {usuario ? (
+          // Rutas autenticadas (app)
+          <Stack.Screen name="(app)" options={{ headerShown: false }} />
+        ) : (
+          // Rutas no autenticadas (auth)
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        )}
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
+  );
+}
+
+/**
+ * Componente principal que envuelve con el proveedor de autenticación
+ */
+export default function RootLayout() {
+  return (
+    <ProveedorAutenticacion>
+      <RootLayoutContent />
+    </ProveedorAutenticacion>
   );
 }
