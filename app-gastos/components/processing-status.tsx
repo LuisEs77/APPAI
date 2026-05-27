@@ -66,7 +66,7 @@ export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
           {/* Loading Spinner */}
           {state.isLoading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORES.azulClaro} />
+              <ActivityIndicator size="large" color={COLORES.acento} />
               <Text style={styles.loadingText}>
                 Enviando imagenes al servidor...
               </Text>
@@ -168,14 +168,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: COLORES.azulClaro,
+    backgroundColor: COLORES.acento,
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORES.blanco,
+    color: COLORES.negro,
   },
   progressSection: {
     paddingHorizontal: 20,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORES.azulClaro,
+    backgroundColor: COLORES.acento,
   },
   progressText: {
     fontSize: 13,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     color: COLORES.error,
   },
   closeButton: {
-    backgroundColor: COLORES.azulOscuro,
+    backgroundColor: COLORES.acento,
     marginHorizontal: 20,
     marginVertical: 16,
     paddingVertical: 14,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButtonText: {
-    color: COLORES.blanco,
+    color: COLORES.negro,
     fontSize: 16,
     fontWeight: '600',
   },

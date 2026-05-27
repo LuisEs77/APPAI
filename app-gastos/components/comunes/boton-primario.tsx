@@ -31,7 +31,7 @@ export const BotonPrimario: React.FC<BotonPrimarioxProps> = ({
   deshabilitado = false,
   estilo,
   estiloTexto,
-  colorFondo = COLORES.azulOscuro,
+  colorFondo = COLORES.acento,
 }) => {
   const estilosLocales = StyleSheet.create({
     boton: {

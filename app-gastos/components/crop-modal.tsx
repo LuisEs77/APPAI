@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Modal,
@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -43,16 +44,63 @@ export const CropModal: React.FC<CropModalProps> = ({
     height: 400,
   });
 
-  const handleImageLoad = (event: any) => {
-    const { width: imgWidth, height: imgHeight } = event.nativeEvent.source;
-    const aspectRatio = imgWidth / imgHeight;
-    const maxWidth = IMAGE_MAX_WIDTH;
-    const maxHeight = maxWidth / aspectRatio;
+  // Get image dimensions on mount
+  useEffect(() => {
+    if (visible && imageUri) {
+      if (Platform.OS === 'web') {
+        // On web, try to get dimensions from Image element
+        const img = new (window as any).Image();
+        img.onload = () => {
+          const aspectRatio = img.width / img.height;
+          const maxWidth = IMAGE_MAX_WIDTH;
+          const maxHeight = maxWidth / aspectRatio;
+          setImageDimensions({
+            width: maxWidth,
+            height: Math.min(maxHeight, height * 0.6),
+          });
+        };
+        img.src = imageUri;
+      } else {
+        // On native, use Image.getSize
+        Image.getSize(
+          imageUri,
+          (imgWidth: number, imgHeight: number) => {
+            const aspectRatio = imgWidth / imgHeight;
+            const maxWidth = IMAGE_MAX_WIDTH;
+            const maxHeight = maxWidth / aspectRatio;
+            setImageDimensions({
+              width: maxWidth,
+              height: Math.min(maxHeight, height * 0.6),
+            });
+          },
+          () => {
+            // Fallback if getSize fails
+            setImageDimensions({
+              width: IMAGE_MAX_WIDTH,
+              height: (IMAGE_MAX_WIDTH * 3) / 4,
+            });
+          }
+        );
+      }
+    }
+  }, [visible, imageUri]);
 
-    setImageDimensions({
-      width: maxWidth,
-      height: Math.min(maxHeight, height * 0.6),
-    });
+  const handleImageLoad = (event: any) => {
+    // On native platforms, this can help refine dimensions
+    if (Platform.OS !== 'web' && event.nativeEvent?.source) {
+      const { width: imgWidth, height: imgHeight } = event.nativeEvent.source;
+      if (imgWidth && imgHeight) {
+        const aspectRatio = imgWidth / imgHeight;
+        const maxWidth = IMAGE_MAX_WIDTH;
+        const maxHeight = maxWidth / aspectRatio;
+
+        setImageDimensions({
+          width: maxWidth,
+          height: Math.min(maxHeight, height * 0.6),
+        });
+      }
+    }
+    // On web, dimensions are already set by useEffect
   };
 
   const handleCrop = async () => {
@@ -229,7 +277,7 @@ export const CropModal: React.FC<CropModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORES.fondoOscuro,
+    backgroundColor: COLORES.grisOscuro2,
   },
   header: {
     backgroundColor: COLORES.error,

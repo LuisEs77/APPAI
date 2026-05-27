@@ -4,7 +4,8 @@
  */
 
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { API_ENDPOINTS } from '@/constants/api-endpoints';
+import { servicioAlmacenamiento } from './almacenamiento';
 
 export interface Recibo {
   id: string;
@@ -33,19 +34,20 @@ export interface Estadisticas {
 }
 
 class GastosService {
-  private baseUrl = 'http://localhost:3000/api';
+  private baseUrl = API_ENDPOINTS.BASE;
 
   /**
    * Crear cliente axios con autenticacion
    */
   private async crearCliente() {
-    const token = await SecureStore.getItemAsync('token');
+    const token = await servicioAlmacenamiento.obtenerString('token');
     return axios.create({
       baseURL: this.baseUrl,
       timeout: 60000, // Mayor timeout para procesamiento IA
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+        'ngrok-skip-browser-warning': 'true',
       },
     });
   }

@@ -2,9 +2,12 @@
  * Configuracion de endpoints del API backend
  */
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+// URL del tunel ngrok proporcionada por el usuario
+const API_BASE_URL = 'https://vintage-visitor-wrench.ngrok-free.dev/api';
 
 export const API_ENDPOINTS = {
+  // Base
+  BASE: API_BASE_URL,
   // Autenticacion
   LOGIN: `${API_BASE_URL}/auth/login`,
   REGISTRO: `${API_BASE_URL}/auth/registro`,

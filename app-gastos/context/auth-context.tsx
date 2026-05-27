@@ -5,7 +5,8 @@
 
 import React, { createContext, useState, useCallback, ReactNode } from 'react';
 import { Usuario, RespuestaAutenticacion } from '../types/usuario';
-import * as SecureStore from 'expo-secure-store';
+import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { servicioAlmacenamiento } from '../services/almacenamiento';
 
 interface ContextoAutenticacion {
   usuario: Usuario | null;
@@ -72,12 +73,12 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
   const restaurarSesion = useCallback(async () => {
     try {
       setCargando(true);
-      const tokenGuardado = await SecureStore.getItemAsync('token');
-      const usuarioGuardado = await SecureStore.getItemAsync('usuario');
+      const tokenGuardado = await servicioAlmacenamiento.obtenerString('token');
+      const usuarioGuardado = await servicioAlmacenamiento.obtenerObjeto<Usuario>('usuario');
 
       if (tokenGuardado && usuarioGuardado) {
         setToken(tokenGuardado);
-        setUsuario(JSON.parse(usuarioGuardado));
+        setUsuario(usuarioGuardado);
       }
     } catch (err) {
       console.error('Error restaurando sesion:', err);
@@ -100,10 +101,13 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
 
         // Llamar al servicio de autenticación
         const respuesta = await fetch(
-          'http://localhost:3000/api/auth/login',
+          API_ENDPOINTS.LOGIN,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
             body: JSON.stringify({ email, password: contraseña }),
           },
         );
@@ -118,8 +122,8 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
         setToken(datos.accessToken);
         setUsuario(datos.usuario as unknown as Usuario);
 
-        await SecureStore.setItemAsync('token', datos.accessToken);
-        await SecureStore.setItemAsync('usuario', JSON.stringify(datos.usuario));
+        await servicioAlmacenamiento.guardar('token', datos.accessToken);
+        await servicioAlmacenamiento.guardar('usuario', datos.usuario);
 
         return datos;
       } catch (err) {
@@ -149,10 +153,13 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
         setError(null);
 
         const respuesta = await fetch(
-          'http://localhost:3000/api/auth/registro',
+          API_ENDPOINTS.REGISTRO,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
             body: JSON.stringify({
               email,
               password: contraseña,
@@ -172,8 +179,8 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
         setToken(datos.accessToken);
         setUsuario(datos.usuario as unknown as Usuario);
 
-        await SecureStore.setItemAsync('token', datos.accessToken);
-        await SecureStore.setItemAsync('usuario', JSON.stringify(datos.usuario));
+        await servicioAlmacenamiento.guardar('token', datos.accessToken);
+        await servicioAlmacenamiento.guardar('usuario', datos.usuario);
 
         return datos;
       } catch (err) {
@@ -198,8 +205,8 @@ export const ProveedorAutenticacion: React.FC<ProveedorAutenticacionProps> = ({
       setUsuario(null);
       setError(null);
 
-      await SecureStore.deleteItemAsync('token');
-      await SecureStore.deleteItemAsync('usuario');
+      await servicioAlmacenamiento.eliminar('token');
+      await servicioAlmacenamiento.eliminar('usuario');
     } catch (err) {
       console.error('Error cerrando sesion:', err);
     } finally {

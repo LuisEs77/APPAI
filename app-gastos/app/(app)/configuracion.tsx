@@ -21,7 +21,7 @@ export default function ConfiguracionScreen() {
           <Switch
             value={notificaciones}
             onValueChange={setNotificaciones}
-            trackColor={{ false: COLORES.grisClaro, true: COLORES.azulClaro }}
+            trackColor={{ false: COLORES.grisClaro, true: COLORES.acento }}
             thumbColor={COLORES.blanco}
           />
         </View>
@@ -36,7 +36,7 @@ export default function ConfiguracionScreen() {
           <Switch
             value={modoOscuro}
             onValueChange={setModoOscuro}
-            trackColor={{ false: COLORES.grisClaro, true: COLORES.azulClaro }}
+            trackColor={{ false: COLORES.grisClaro, true: COLORES.acento }}
             thumbColor={COLORES.blanco}
           />
         </View>
@@ -56,7 +56,7 @@ const estilos = StyleSheet.create({
   titulo: {
     fontSize: TIPOGRAFIA.tamanios.xl,
     fontWeight: '700',
-    color: COLORES.azulOscuro,
+    color: COLORES.textoOscuro,
     marginBottom: ESPACIADO.xl,
   },
   opcion: {

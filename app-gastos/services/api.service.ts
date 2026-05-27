@@ -5,12 +5,12 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { servicioAlmacenamiento } from './almacenamiento';
 
 class ServicioApi {
   private cliente: AxiosInstance;
-  private baseUrl: string = 'http://localhost:3000/api';
+  private baseUrl: string = API_ENDPOINTS.BASE;
 
   constructor() {
     this.cliente = axios.create({
@@ -18,13 +18,14 @@ class ServicioApi {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
       },
     });
 
     // Interceptor para agregar token JWT a cada solicitud
     this.cliente.interceptors.request.use(
       async (config) => {
-        const token = await SecureStore.getItemAsync('token');
+        const token = await servicioAlmacenamiento.obtenerString('token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -39,8 +40,8 @@ class ServicioApi {
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
           // Token expirado, limpiar almacenamiento
-          await SecureStore.deleteItemAsync('token');
-          await SecureStore.deleteItemAsync('usuario');
+          await servicioAlmacenamiento.eliminar('token');
+          await servicioAlmacenamiento.eliminar('usuario');
         }
         return Promise.reject(error);
       },

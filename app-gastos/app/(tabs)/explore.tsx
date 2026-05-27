@@ -1,5 +1,4 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Image, Platform, StyleSheet } from 'react-native';
 
 import { Collapsible } from '@/components/ui/collapsible';
 import { ExternalLink } from '@/components/external-link';
@@ -57,10 +56,6 @@ export default function TabTwoScreen() {
           <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
           different screen densities
         </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
         <ExternalLink href="https://reactnative.dev/docs/images">
           <ThemedText type="link">Learn more</ThemedText>
         </ExternalLink>

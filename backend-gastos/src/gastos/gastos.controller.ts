@@ -51,6 +51,30 @@ export class GastosController {
   }
 
   /**
+   * POST /gastos/procesar-multiples - Procesar varias facturas a la vez
+   * @param cuerpo Objeto con array de imágenes base64
+   * @param request Request con usuario autenticado
+   * @returns Resultados del procesamiento
+   */
+  @Post('procesar-multiples')
+  @HttpCode(HttpStatus.OK)
+  async procesarMultiples(
+    @Body() cuerpo: { images: string[] },
+    @Request() request: any,
+  ): Promise<any> {
+    if (!cuerpo.images || !Array.isArray(cuerpo.images)) {
+      throw new BadRequestException(
+        'Debe proporcionar un array "images" en el cuerpo',
+      );
+    }
+
+    return await this.gastosService.procesarMultiplesFacturas(
+      request.user.id,
+      cuerpo.images,
+    );
+  }
+
+  /**
    * GET /gastos - Obtener recibos del usuario (con filtros opcionales)
    * @param request Request con usuario autenticado
    * @param fechaInicio Fecha inicio (YYYY-MM-DD)

@@ -1,51 +1,66 @@
 /**
- * Paleta de colores corporativa minimalista
- * Basada en estetica profesional: Azul oscuro, Gris y Blanco
- * SIN emojis y SIN acentos en nombres de variables
+ * Paleta moderna con mayor contraste
+ * Blanco, Grises más oscuros, Negro y Verde Lima vibrante
  */
 
 export const COLORES = {
-  // Colores principales
-  azulOscuro: '#003366', // RGB: 0, 51, 102
-  azulClaro: '#0055AA', // RGB: 0, 85, 170
-  grisOscuro: '#333333', // RGB: 51, 51, 51
-  grisClaro: '#EEEEEE', // RGB: 238, 238, 238
+  // Colores base
   blanco: '#FFFFFF',
+  negro: '#000000',
+  
+  // Escala de grises con mayor contraste
+  grisClaro: '#F5F5F5',
+  grisClaro2: '#EBEBEB',
+  grisClaro3: '#DCDCDC',
+  grisMedio: '#BDBDBD',
+  grisOscuro: '#757575',
+  grisOscuro2: '#424242',
 
-  // Estados
-  exito: '#27AE60', // Verde para operaciones exitosas
-  error: '#E74C3C', // Rojo para errores
-  advertencia: '#F39C12', // Naranja para advertencias
-  informacion: '#3498DB', // Azul para informacion
+  // Acento principal: Verde Lima más vibrante
+  acento: '#CCFF00', // Verde lima más brillante
+  acentoOscuro: '#B3E600', // Verde lima oscuro para hover
 
-  // Variantes de gris para textos
-  textoOscuro: '#333333',
-  textoMedio: '#666666',
-  textoClaro: '#999999',
-  textoPlaceholder: '#CCCCCC',
+  // Estados con mejor contraste
+  exito: '#059669', // Verde más oscuro
+  error: '#DC2626', // Rojo más vibrante
+  advertencia: '#EA580C', // Naranja más vibrante
+  informacion: '#0369A1', // Azul más oscuro
+
+  // Texto
+  textoOscuro: '#101010',
+  textoMedio: '#424242',
+  textoClaro: '#757575',
+  textoPlaceholder: '#A0A0A0',
 
   // Fondos
-  fondoOscuro: '#003366',
-  fondoLightAlt: '#F8F9FA',
+  fondoPrincipal: '#FFFFFF',
+  fondoSecundario: '#F8F8F8',
+  fondoTerciario: '#F0F0F0',
 };
 
 /**
- * Tema de tipografia y tamanios
+ * Tipografía moderna y legible
  */
 export const TIPOGRAFIA = {
   tamanios: {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
+    xs: 11,
+    sm: 13,
+    base: 15,
+    lg: 17,
+    xl: 19,
+    xxl: 22,
+    xxxl: 28,
   },
   pesos: {
+    light: '300' as const,
     normal: '400' as const,
+    medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+  },
+  familias: {
+    base: 'System',
+    mono: 'Courier New',
   },
 };
 
@@ -62,38 +77,39 @@ export const ESPACIADO = {
 };
 
 /**
- * Radio de esquinas redondeadas
+ * Radio de esquinas redondeadas - más suave
  */
 export const RADIO = {
-  pequeno: 4,
-  mediano: 8,
-  grande: 12,
+  pequeno: 6,
+  mediano: 10,
+  grande: 14,
+  redondeado: 18,
   completo: 999,
 };
 
 /**
- * Sombras sutiles
+ * Sombras sutiles y modernas
  */
 export const SOMBRAS = {
   leve: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 1,
   },
   media: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   profunda: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 3,
   },
 };

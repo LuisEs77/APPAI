@@ -19,9 +19,19 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
+  "pnpm": {
+    "trustedDependencies": [
+      "@nestjs/core",
+      "bcrypt",
+      "sqlite3",
+      "@sentry/profiling-node",
+      "unrs-resolver"
+    ]
+  },
   "dependencies": {
     "@nestjs/axios": "^1.0.0",
     "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^10.0.0",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.0",
@@ -45,7 +55,6 @@
     "pg": "^8.21.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sqlite3": "^5.1.7",
     "typeorm": "^0.3.30",
     "uuid": "^9.0.1",
     "winston": "^3.19.0"

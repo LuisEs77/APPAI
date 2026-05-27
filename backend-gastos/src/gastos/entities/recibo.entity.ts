@@ -37,7 +37,7 @@ export class Recibo {
   @JoinColumn({ name: 'usuarioId' })
   usuario: Usuario;
 
-  @Column({ type: 'varchar', length: 36 })
+  @Column({ type: 'varchar' })
   usuarioId: string;
 
   /**

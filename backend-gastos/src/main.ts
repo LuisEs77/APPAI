@@ -6,7 +6,23 @@ import { json, urlencoded } from 'express'; // 👈 1. IMPORTAMOS ESTO DE EXPRES
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  app.enableCors();
+  // 1. Establecer prefijo global PRIMERO
+  app.setGlobalPrefix('api');
+
+  // 2. Configurar CORS ultra-permisivo para depuración
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: '*',
+  });
+
+  // 3. Middleware para ver EXACTAMENTE qué llega al servidor
+  app.use((req, res, next) => {
+    const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    console.log(`[Incoming Request] ${req.method} ${fullUrl}`);
+    next();
+  });
   
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

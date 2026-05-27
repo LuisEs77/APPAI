@@ -75,6 +75,53 @@ export class GastosService {
   }
 
   /**
+   * Procesar múltiples facturas a la vez
+   * @param usuarioId ID del usuario
+   * @param imagenes Array de imágenes en base64
+   * @returns Resumen de procesamiento (exitosos, duplicados, errores)
+   */
+  async procesarMultiplesFacturas(
+    usuarioId: string,
+    imagenes: string[],
+  ): Promise<any> {
+    this.logger.log(`Procesando lote de ${imagenes.length} facturas para usuario ${usuarioId}`);
+
+    const resultados = {
+      exitosos: [] as Recibo[],
+      duplicados: [] as { index: number; error: string }[],
+      errores: [] as { index: number; error: string }[],
+      resumen: {
+        total_procesados: imagenes.length,
+        total_exitosos: 0,
+        total_duplicados: 0,
+        total_errores: 0,
+      },
+    };
+
+    // Procesar secuencialmente para evitar saturar la IA (Ollama)
+    for (let i = 0; i < imagenes.length; i++) {
+      try {
+        const recibo = await this.procesarFactura(usuarioId, imagenes[i]);
+        resultados.exitosos.push(recibo);
+        resultados.resumen.total_exitosos++;
+      } catch (error: any) {
+        if (error instanceof ConflictException) {
+          resultados.duplicados.push({ index: i, error: error.message });
+          resultados.resumen.total_duplicados++;
+        } else {
+          this.logger.error(`Error procesando imagen ${i}: ${error.message}`);
+          resultados.errores.push({ index: i, error: error.message });
+          resultados.resumen.total_errores++;
+        }
+      }
+      
+      resultados.resumen.total_procesados = i + 1;
+    }
+
+    return resultados;
+  }
+
+  /**
    * Obtener todos los recibos del usuario autenticado
    * @param usuarioId ID del usuario
    * @param filtros Filtros opcionales (fecha, categoria)

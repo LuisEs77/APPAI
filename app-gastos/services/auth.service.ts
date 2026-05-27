@@ -4,8 +4,8 @@
  */
 
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { servicioAlmacenamiento } from './almacenamiento';
 
 export interface Usuario {
   id: string;
@@ -37,8 +37,11 @@ export interface RegistroDto {
 
 class AuthService {
   private cliente = axios.create({
-    baseURL: 'http://localhost:3000/api',
+    baseURL: API_ENDPOINTS.BASE,
     timeout: 30000,
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+    },
   });
 
   /**
@@ -55,11 +58,8 @@ class AuthService {
       );
 
       // Guardar token en storage
-      await SecureStore.setItemAsync('token', respuesta.data.accessToken);
-      await SecureStore.setItemAsync(
-        'usuario',
-        JSON.stringify(respuesta.data.usuario)
-      );
+      await servicioAlmacenamiento.guardar('token', respuesta.data.accessToken);
+      await servicioAlmacenamiento.guardar('usuario', respuesta.data.usuario);
 
       return respuesta.data;
     } catch (error: any) {
@@ -83,11 +83,8 @@ class AuthService {
       );
 
       // Guardar token en storage
-      await SecureStore.setItemAsync('token', respuesta.data.accessToken);
-      await SecureStore.setItemAsync(
-        'usuario',
-        JSON.stringify(respuesta.data.usuario)
-      );
+      await servicioAlmacenamiento.guardar('token', respuesta.data.accessToken);
+      await servicioAlmacenamiento.guardar('usuario', respuesta.data.usuario);
 
       return respuesta.data;
     } catch (error: any) {
@@ -102,13 +99,8 @@ class AuthService {
    * Obtener usuario actual del storage
    * @returns Usuario o null
    */
-  async obtenerUsuarioActual(): Promise<Usuario | null> {
-    try {
-      const usuarioJson = await SecureStore.getItemAsync('usuario');
-      return usuarioJson ? JSON.parse(usuarioJson) : null;
-    } catch {
-      return null;
-    }
+  async obtenerUsuario(): Promise<Usuario | null> {
+    return await servicioAlmacenamiento.obtenerObjeto<Usuario>('usuario');
   }
 
   /**
@@ -116,16 +108,17 @@ class AuthService {
    * @returns Token JWT o null
    */
   async obtenerToken(): Promise<string | null> {
-    return await SecureStore.getItemAsync('token');
+    return await servicioAlmacenamiento.obtenerString('token');
   }
 
   /**
    * Cerrar sesion (logout)
    */
   async cerrarSesion(): Promise<void> {
-    await SecureStore.deleteItemAsync('token');
-    await SecureStore.deleteItemAsync('usuario');
+    await servicioAlmacenamiento.eliminar('token');
+    await servicioAlmacenamiento.eliminar('usuario');
   }
+
 
   /**
    * Verificar si hay sesion activa

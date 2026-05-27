@@ -57,7 +57,7 @@ export default function OlvidoPasswordScreen() {
     titulo: {
       fontSize: TIPOGRAFIA.tamanios.xxl,
       fontWeight: TIPOGRAFIA.pesos.bold,
-      color: COLORES.azulOscuro,
+      color: COLORES.textoOscuro,
       marginBottom: ESPACIADO.md,
     },
     descripcion: {
@@ -73,7 +73,7 @@ export default function OlvidoPasswordScreen() {
       alignItems: 'center',
     },
     enlace: {
-      color: COLORES.azulClaro,
+      color: COLORES.acento,
       fontWeight: TIPOGRAFIA.pesos.semibold,
     },
   });

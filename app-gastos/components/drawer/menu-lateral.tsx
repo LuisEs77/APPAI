@@ -44,7 +44,7 @@ export const MenuLateral: React.FC<MenuLateralProps> = (props) => {
       backgroundColor: COLORES.blanco,
     },
     perfil: {
-      backgroundColor: COLORES.azulOscuro,
+      backgroundColor: COLORES.grisOscuro2,
       padding: ESPACIADO.lg,
       paddingTop: ESPACIADO.xl,
       paddingBottom: ESPACIADO.xl,

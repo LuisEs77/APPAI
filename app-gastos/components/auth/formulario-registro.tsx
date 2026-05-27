@@ -106,8 +106,7 @@ export const FormularioRegistro: React.FC = () => {
     titulo: {
       fontSize: TIPOGRAFIA.tamanios.xxl,
       fontWeight: TIPOGRAFIA.pesos.bold,
-      color: COLORES.azulOscuro,
-      marginBottom: ESPACIADO.sm,
+      color: COLORES.textoOscuro,
     },
     subtitulo: {
       fontSize: TIPOGRAFIA.tamanios.base,
@@ -133,14 +132,14 @@ export const FormularioRegistro: React.FC = () => {
       width: 20,
       height: 20,
       borderWidth: 1,
-      borderColor: COLORES.azulOscuro,
+      borderColor: COLORES.acento,
       borderRadius: 4,
       marginRight: ESPACIADO.md,
       alignItems: 'center',
       justifyContent: 'center',
     },
     checkboxMarcado: {
-      backgroundColor: COLORES.azulOscuro,
+      backgroundColor: COLORES.acento,
     },
     checkboxTexto: {
       flex: 1,
@@ -162,7 +161,7 @@ export const FormularioRegistro: React.FC = () => {
     },
     enlace: {
       fontSize: TIPOGRAFIA.tamanios.base,
-      color: COLORES.azulClaro,
+      color: COLORES.acento,
       fontWeight: TIPOGRAFIA.pesos.semibold,
       marginLeft: ESPACIADO.xs,
     },

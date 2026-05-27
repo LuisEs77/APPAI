@@ -153,7 +153,7 @@ ProyectoIA/
 5. Se almacena recibo vinculado al usuario. Un hash SHA-256 previene duplicados (`DuplicidadService`).
 6. Frontend notifica exito al usuario mediante WebSockets o Polling si el proceso es asíncrono.
 
-## Modelado de Base de Datos
+## Modelado de Base de Datos (PostgreSQL)
 
 ### Tabla Usuarios
 - id (UUID, PK)
@@ -162,7 +162,6 @@ ProyectoIA/
 - nombre (VARCHAR)
 - createdAt (TIMESTAMP)
 - updatedAt (TIMESTAMP)
-- *Agregado Sugerido:* `role` (ENUM: USER, ADMIN) para ABAC/RBAC. `isActive` (BOOLEAN) para soft deletes.
 
 ### Tabla Recibos
 - id (UUID, PK)
@@ -173,13 +172,41 @@ ProyectoIA/
 - total (DECIMAL, precision 10,2)
 - moneda (VARCHAR, default 'Q')
 - imagen_hash (VARCHAR, UNIQUE) - *Prevención anti-duplicidad de Fase 2*
-- imagen_url / imagen (TEXT) - *Transición sugerida de blob a Object Storage (S3/GCS)*
+- imagen_url / imagen (TEXT)
 - createdAt (TIMESTAMP)
 - updatedAt (TIMESTAMP)
 
+## Guia de Inicio Rapido
+
+### 1. Requisitos Previos
+- Node.js (v18+)
+- pnpm (`npm install -g pnpm`)
+- Docker y Docker Compose
+- Ollama corriendo localmente (`ollama run neural-chat`)
+
+### 2. Levantar el Backend
+```bash
+cd backend-gastos
+pnpm install
+# Copiar variables de entorno
+cp .env.example .env
+# Iniciar Base de Datos (Postgres)
+docker compose up -d
+# Iniciar servidor en modo desarrollo
+pnpm run start:dev
+```
+
+### 3. Levantar el Frontend
+```bash
+cd app-gastos
+pnpm install
+# Iniciar Expo
+npx expo start
+```
+
 ## Infraestructura y Observabilidad (Pipeline CI/CD)
 
-- **Contenedores**: Empaquetado de la API NestJS vía Docker. 
+- **Contenedores**: Empaquetado de la API NestJS vía Docker y base de datos PostgreSQL. 
 - **Despliegue Continuo**: Integración con GitHub Actions.
 - **Observabilidad**: Integración nativa con **Sentry** (Manejo de excepciones en Expo y NestJS), **Winston/Pino** para log estructurado JSON, y monitorización de Node.js via APM.
 - **Seguridad Perimetral**: Uso de CORS estricto, Helmet en NestJS para cabeceras seguras, y limitador de peticiones globales (`@nestjs/throttler`).
@@ -208,8 +235,12 @@ ProyectoIA/
 
 ### Backend
 ```
-DATABASE_TYPE=sqlite (Próximo paso: postgres)
-DATABASE_PATH=./data/gastos.db
+DATABASE_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=gastos_db
 JWT_SECRET=tu_secreto_jwt_super_seguro
 JWT_EXPIRATION=7d
 OLLAMA_API_URL=http://localhost:11434
@@ -218,13 +249,11 @@ NODEMAILER_HOST=smtp.gmail.com
 NODEMAILER_PORT=587
 NODEMAILER_USER=tu_email@gmail.com
 NODEMAILER_PASS=tu_app_password
-TELEGRAM_BOT_TOKEN=tu_token_telegram
-TELEGRAM_CHAT_ID=tu_chat_id
 ```
 
 ### Frontend
 ```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api
+EXPO_PUBLIC_API_URL=http://localhost:3000
 EXPO_PUBLIC_APP_NAME=Control de Gastos
 ```
 
@@ -239,33 +268,34 @@ EXPO_PUBLIC_APP_NAME=Control de Gastos
 7. [x] Implementar pantallas autenticacion
 8. [x] Implementar pantalla captura (y Multi-captura de Fase 2)
 9. [x] Implementar historial y filtros
-10. [x] **Migración a PostgreSQL** para producción robusta.
+10. [x] **Migración a PostgreSQL** completada ✅
 11. [ ] Implementar **Sentry y Logging Estructurado**
 12. [ ] Testing e2e automatizado
 13. [x] Integrar **Expo SecureStore** en reemplazo de AsyncStorage para Tokens
 14. [ ] Deployment mediante Docker y GitHub Actions
 
-## Estado Actual (25 de Mayo 2026)
+## Estado Actual (26 de Mayo 2026)
 
 ### BACKEND - COMPLETADO 100% ✅
 - Compilación: SIN ERRORES
 - Módulos completados: Auth, Usuarios, Gastos, IA, Reportes, Guards
-- Base de datos: TypeORM + SQLite configurado
+- **Base de datos: Migración a PostgreSQL exitosa usando Docker** ✅
 - Autenticación: JWT con Passport completamente integrado
 - IA: Ollama integration lista (neural-chat model)
 - Reportes: Excel + Email con Nodemailer + Integración con Telegram de Fase 2.
 
-### FRONTEND - EN CONSTRUCCION 🚀
+### FRONTEND - EN REFINAMIENTO 🚀
 - Dependencias: Instaladas y actualizadas (incluye expo-image-manipulator y uuid)
 - Estructura de rutas: Expo Router configurado
 - Servicios creados:
   - `auth.service.ts` ✅ Login, registro, sesion
   - `gastos.service.ts` ✅ CRUD recibos, reportes
-  - `almacenamiento.ts` ✅ AsyncStorage wrapper (Pendiente upgrade a SecureStore)
+  - `almacenamiento.ts` ✅ Migración a **Expo SecureStore** completada ✅
   - `api.service.ts` (base con interceptores JWT)
 - Componentes y Pantallas: Implementados ✅ (Incluyendo ImageCarousel y CropModal)
 
 **Próximos pasos frontend:**
 1. Testing integral
 2. Refinamiento de UI/UX
-3. Upgrade a **Expo SecureStore** para mayor seguridad de credenciales.
+3. Pruebas de integración con el nuevo motor PostgreSQL.
+

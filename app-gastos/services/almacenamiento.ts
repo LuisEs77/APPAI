@@ -3,9 +3,12 @@
  * Envuelve AsyncStorage para facilitar lectura y escritura
  */
 
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 class ServicioAlmacenamiento {
+  private esWeb = Platform.OS === 'web';
+
   /**
    * Guardar valor (string o JSON)
    */
@@ -13,7 +16,12 @@ class ServicioAlmacenamiento {
     try {
       const valorGuardar =
         typeof valor === 'string' ? valor : JSON.stringify(valor);
-      await SecureStore.setItemAsync(clave, valorGuardar);
+      
+      if (this.esWeb) {
+        localStorage.setItem(clave, valorGuardar);
+      } else {
+        await SecureStore.setItemAsync(clave, valorGuardar);
+      }
     } catch (error) {
       console.error(`Error guardando ${clave}:`, error);
     }
@@ -24,7 +32,11 @@ class ServicioAlmacenamiento {
    */
   async obtenerString(clave: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(clave);
+      if (this.esWeb) {
+        return localStorage.getItem(clave);
+      } else {
+        return await SecureStore.getItemAsync(clave);
+      }
     } catch (error) {
       console.error(`Error obteniendo ${clave}:`, error);
       return null;
@@ -36,7 +48,7 @@ class ServicioAlmacenamiento {
    */
   async obtenerObjeto<T>(clave: string): Promise<T | null> {
     try {
-      const valor = await SecureStore.getItemAsync(clave);
+      const valor = await this.obtenerString(clave);
       return valor ? JSON.parse(valor) : null;
     } catch (error) {
       console.error(`Error obteniendo objeto ${clave}:`, error);
@@ -49,7 +61,11 @@ class ServicioAlmacenamiento {
    */
   async eliminar(clave: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(clave);
+      if (this.esWeb) {
+        localStorage.removeItem(clave);
+      } else {
+        await SecureStore.deleteItemAsync(clave);
+      }
     } catch (error) {
       console.error(`Error eliminando ${clave}:`, error);
     }
@@ -60,21 +76,15 @@ class ServicioAlmacenamiento {
    */
   async limpiarTodo(): Promise<void> {
     try {
-      await console.warn('clear not supported');
+      if (this.esWeb) {
+        localStorage.clear();
+      } else {
+        // SecureStore no tiene clear() directo para todas las llaves, 
+        // habria que borrarlas una por una o usar otra estrategia
+        console.warn('SecureStore clear not fully supported natively');
+      }
     } catch (error) {
       console.error('Error limpiando almacenamiento:', error);
-    }
-  }
-
-  /**
-   * Obtener todas las claves
-   */
-  async obtenerClaves(): Promise<string[]> {
-    try {
-      return await [];
-    } catch (error) {
-      console.error('Error obteniendo claves:', error);
-      return [];
     }
   }
 }

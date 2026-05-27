@@ -1,81 +1,160 @@
-import React from 'react';
-import { Drawer } from 'expo-router/drawer';
-import { COLORES } from '@/constants/colores';
+import React, { useState } from 'react';
+import { Tabs } from 'expo-router';
+import { Platform, View, Pressable, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { COLORES, TIPOGRAFIA, SOMBRAS, ESPACIADO, RADIO } from '@/constants/colores';
 import { TEXTOS } from '@/constants/textos';
-import { MenuLateral } from '@/components/drawer/menu-lateral';
 
 /**
  * Layout para rutas autenticadas
- * Usa Drawer Navigator (menu lateral) como navegacion principal
+ * Tabs Navigator moderno y amigable
  */
 export default function AppLayout() {
+  const [notificacionesNoLeidas, setNotificacionesNoLeidas] = useState(3);
+
+  const notificationBadgeStyle = StyleSheet.create({
+    badge: {
+      position: 'absolute',
+      top: -8,
+      right: -8,
+      backgroundColor: COLORES.error,
+      borderRadius: RADIO.completo,
+      minWidth: 24,
+      height: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: ESPACIADO.xs,
+      borderWidth: 2,
+      borderColor: COLORES.blanco,
+      ...SOMBRAS.media,
+    },
+    badgeText: {
+      color: COLORES.blanco,
+      fontSize: TIPOGRAFIA.tamanios.xs,
+      fontWeight: TIPOGRAFIA.pesos.bold,
+    },
+  });
+
   return (
-    <Drawer
+    <Tabs
       screenOptions={{
         headerStyle: {
-          backgroundColor: COLORES.azulOscuro,
-        },
-        headerTintColor: COLORES.blanco,
-        headerTitleStyle: {
-          fontWeight: '600',
-          fontSize: 18,
-        },
-        drawerStyle: {
           backgroundColor: COLORES.blanco,
-          width: 280,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: COLORES.grisClaro3,
         },
-        drawerLabelStyle: {
+        headerTintColor: COLORES.negro,
+        headerTitleStyle: {
+          fontWeight: TIPOGRAFIA.pesos.bold,
+          fontSize: TIPOGRAFIA.tamanios.lg,
           color: COLORES.textoOscuro,
-          fontSize: 14,
-          fontWeight: '500',
-          marginLeft: -16,
         },
-        drawerActiveTintColor: COLORES.azulClaro,
-        drawerInactiveTintColor: COLORES.textoMedio,
+        headerRight: () => (
+          <Pressable
+            onPress={() => console.log('Abrir notificaciones')}
+            style={{ paddingRight: ESPACIADO.lg, position: 'relative' }}
+          >
+            <Ionicons name="notifications-outline" size={24} color={COLORES.negro} />
+            {notificacionesNoLeidas > 0 && (
+              <View style={notificationBadgeStyle.badge}>
+                <Text style={notificationBadgeStyle.badgeText}>
+                  {notificacionesNoLeidas > 9 ? '9+' : notificacionesNoLeidas}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ),
+        tabBarStyle: {
+          backgroundColor: COLORES.blanco,
+          borderTopWidth: 1,
+          borderTopColor: COLORES.grisClaro3,
+          height: Platform.OS === 'ios' ? 80 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingTop: 8,
+          elevation: 10,
+          shadowColor: COLORES.negro,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+        },
+        tabBarActiveTintColor: COLORES.acento,
+        tabBarInactiveTintColor: COLORES.grisOscuro,
+        tabBarLabelStyle: {
+          display: 'none', // Ocultar etiquetas
+        },
       }}
-      drawerContent={(props) => <MenuLateral {...props} />}
     >
-      <Drawer.Screen
+      <Tabs.Screen
         name="inicio"
         options={{
-          headerTitle: TEXTOS.misgastos,
-          drawerLabel: TEXTOS.inicio,
+          headerTitle: 'APPAI',
+          tabBarLabel: TEXTOS.inicio,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen
+      <Tabs.Screen
         name="historial"
         options={{
           headerTitle: TEXTOS.historial,
-          drawerLabel: TEXTOS.historial,
+          tabBarLabel: TEXTOS.historial,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'list' : 'list-outline'} size={24} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen
+      <Tabs.Screen
+        name="capturador"
+        options={{
+          headerTitle: 'Capturar Factura',
+          tabBarLabel: '',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{
+              backgroundColor: COLORES.acento,
+              width: 56,
+              height: 56,
+              borderRadius: RADIO.completo,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: Platform.OS === 'ios' ? 10 : 2,
+              elevation: 6,
+              shadowColor: COLORES.acento,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+            }}>
+              <Ionicons name="camera" size={28} color={COLORES.negro} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           headerTitle: TEXTOS.perfil,
-          drawerLabel: TEXTOS.perfil,
+          tabBarLabel: TEXTOS.perfil,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
+          ),
         }}
       />
-      <Drawer.Screen
+      
+      {/* Rutas ocultas en la barra de pestañas */}
+      <Tabs.Screen
         name="configuracion"
         options={{
-          headerTitle: TEXTOS.configuracion,
-          drawerLabel: TEXTOS.configuracion,
+          href: null,
         }}
       />
-      <Drawer.Screen
-        name="capturador"
-        options={{
-          headerShown: false,
-          drawerItemStyle: { display: 'none' },
-        }}
-      />
-      <Drawer.Screen
+      <Tabs.Screen
         name="index"
         options={{
-          drawerItemStyle: { display: 'none' },
+          href: null,
         }}
       />
-    </Drawer>
+    </Tabs>
   );
 }

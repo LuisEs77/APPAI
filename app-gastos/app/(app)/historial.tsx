@@ -66,7 +66,7 @@ export default function HistorialScreen() {
     <SafeAreaView style={estilos.contenedor}>
       {cargando ? (
         <View style={estilos.centered}>
-          <ActivityIndicator size="large" color={COLORES.azulClaro} />
+          <ActivityIndicator size="large" color={COLORES.acento} />
         </View>
       ) : (
         <FlatList
@@ -78,7 +78,7 @@ export default function HistorialScreen() {
             <RefreshControl
               refreshing={actualizando}
               onRefresh={handleActualizar}
-              colors={[COLORES.azulClaro]}
+              colors={[COLORES.acento]}
             />
           }
           ListEmptyComponent={
@@ -116,7 +116,7 @@ const estilos = StyleSheet.create({
   comercio: {
     fontSize: TIPOGRAFIA.tamanios.base,
     fontWeight: '600',
-    color: COLORES.azulOscuro,
+    color: COLORES.textoOscuro,
     marginBottom: ESPACIADO.xs,
   },
   categoria: {

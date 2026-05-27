@@ -47,7 +47,7 @@ export class Usuario {
   })
   recibos: Recibo[];
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()

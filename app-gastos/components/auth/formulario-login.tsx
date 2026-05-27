@@ -91,7 +91,7 @@ export const FormularioLogin: React.FC = () => {
     titulo: {
       fontSize: TIPOGRAFIA.tamanios.xxxl,
       fontWeight: TIPOGRAFIA.pesos.bold,
-      color: COLORES.azulOscuro,
+      color: COLORES.textoOscuro,
       marginBottom: ESPACIADO.sm,
     },
     subtitulo: {
@@ -116,7 +116,7 @@ export const FormularioLogin: React.FC = () => {
     },
     enlace: {
       fontSize: TIPOGRAFIA.tamanios.base,
-      color: COLORES.azulClaro,
+      color: COLORES.acento,
       fontWeight: TIPOGRAFIA.pesos.semibold,
       marginLeft: ESPACIADO.xs,
     },
@@ -127,7 +127,7 @@ export const FormularioLogin: React.FC = () => {
     },
     textoEnlace: {
       fontSize: TIPOGRAFIA.tamanios.sm,
-      color: COLORES.azulClaro,
+      color: COLORES.acento,
       fontWeight: TIPOGRAFIA.pesos.semibold,
     },
   });

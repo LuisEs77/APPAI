@@ -6,12 +6,14 @@ import {
   Alert,
   Text,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import uuid from 'react-native-uuid';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORES, ESPACIADO, TIPOGRAFIA, SOMBRAS, RADIO } from '@/constants/colores';
+import { useHaptics } from '@/hooks/use-haptics';
 
 import { ImageCarousel } from '@/components/image-carousel';
 import { CropModal } from '@/components/crop-modal';
@@ -26,6 +28,7 @@ interface ImageItem {
 
 export default function CapturadorScreen() {
   const router = useRouter();
+  const haptics = useHaptics();
   
   const [images, setImages] = useState<ImageItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,10 +43,11 @@ export default function CapturadorScreen() {
     duplicates: 0,
     errors: 0,
     isLoading: false,
-    errorDetails: [] as {index: number, error: any}[] as {index: number, error: any}[],
+    errorDetails: [] as {index: number, error: any}[],
   });
 
   const tomarFoto = async () => {
+    haptics.impactAsync(haptics.ImpactFeedbackStyle.Medium);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permiso denegado', 'Necesitamos acceso a tu camara.');
@@ -67,6 +71,7 @@ export default function CapturadorScreen() {
   };
 
   const seleccionarDelGaleria = async () => {
+    haptics.impactAsync(haptics.ImpactFeedbackStyle.Light);
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galeria.');
@@ -94,6 +99,7 @@ export default function CapturadorScreen() {
   };
 
   const abrirRecortador = () => {
+    haptics.impactAsync(haptics.ImpactFeedbackStyle.Light);
     if (images.length === 0) return;
     setCropModalVisible(true);
   };
@@ -107,6 +113,7 @@ export default function CapturadorScreen() {
     };
     setImages(updatedImages);
     setCropModalVisible(false);
+    haptics.notificationAsync(haptics.NotificationFeedbackType.Success);
   };
 
   const procesarTodasLasImagenes = async () => {
@@ -115,6 +122,7 @@ export default function CapturadorScreen() {
       return;
     }
 
+    haptics.impactAsync(haptics.ImpactFeedbackStyle.Heavy);
     setProcessingState({
       total: images.length,
       processed: 0,
@@ -122,7 +130,7 @@ export default function CapturadorScreen() {
       duplicates: 0,
       errors: 0,
       isLoading: true,
-      errorDetails: [] as {index: number, error: any}[] as {index: number, error: any}[],
+      errorDetails: [],
     });
     setProcessingVisible(true);
 
@@ -140,10 +148,12 @@ export default function CapturadorScreen() {
         errorDetails: resultado.errores || [],
       });
       
-      // Limpiar las imagenes procesadas (opcional, o vaciar todo)
       if ((resultado.resumen?.total_exitosos || 0) > 0) {
          setImages([]);
          setCurrentIndex(0);
+         haptics.notificationAsync(haptics.NotificationFeedbackType.Success);
+      } else {
+         haptics.notificationAsync(haptics.NotificationFeedbackType.Error);
       }
     } catch (error: any) {
       setProcessingState(prev => ({
@@ -151,6 +161,7 @@ export default function CapturadorScreen() {
         isLoading: false,
         errorDetails: [{ index: 0, error: error.message }],
       }));
+      haptics.notificationAsync(haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -158,50 +169,60 @@ export default function CapturadorScreen() {
     <SafeAreaView style={estilos.contenedor}>
       <View style={estilos.header}>
         <TouchableOpacity onPress={() => router.back()} style={estilos.backBoton}>
-          <Ionicons name="arrow-back" size={24} color={COLORES.azulOscuro} />
+          <Ionicons name="close" size={28} color={COLORES.textoOscuro} />
         </TouchableOpacity>
-        <Text style={estilos.titulo}>Capturar Facturas</Text>
+        <Text style={estilos.titulo}>Nueva Factura</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ImageCarousel
-        images={images}
-        currentIndex={currentIndex}
-        onSelectImage={setCurrentIndex}
-        onRemoveImage={(id) => {
-          const newImages = images.filter(img => img.id !== id);
-          setImages(newImages);
-          if (currentIndex >= newImages.length) {
-            setCurrentIndex(Math.max(0, newImages.length - 1));
-          }
-        }}
-      />
+      <ScrollView style={estilos.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={estilos.instrucciones}>
+          <Text style={estilos.instruccionTexto}>
+            Captura o sube tus facturas. La IA extraerá los datos automáticamente.
+          </Text>
+        </View>
 
-      <View style={estilos.botonesContainer}>
+        <View style={estilos.carouselContainer}>
+          <ImageCarousel
+            images={images}
+            currentIndex={currentIndex}
+            onSelectImage={setCurrentIndex}
+            onRemoveImage={(id) => {
+              const newImages = images.filter(img => img.id !== id);
+              setImages(newImages);
+              if (currentIndex >= newImages.length) {
+                setCurrentIndex(Math.max(0, newImages.length - 1));
+              }
+              haptics.impactAsync(haptics.ImpactFeedbackStyle.Light);
+            }}
+          />
+        </View>
+
+        <View style={estilos.botonesContainer}>
         <View style={estilos.filaBotones}>
           <TouchableOpacity style={[estilos.botonAccion, SOMBRAS.media]} onPress={tomarFoto}>
-            <Ionicons name="camera-outline" size={24} color={COLORES.blanco} />
+            <Ionicons name="camera" size={24} color={COLORES.blanco} />
             <Text style={estilos.botonTexto}>Tomar Foto</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[estilos.botonAccion, SOMBRAS.media]} onPress={seleccionarDelGaleria}>
-            <Ionicons name="images-outline" size={24} color={COLORES.blanco} />
-            <Text style={estilos.botonTexto}>Galeria</Text>
+          <TouchableOpacity style={[estilos.botonAccion, { backgroundColor: COLORES.grisClaro }, SOMBRAS.leve]} onPress={seleccionarDelGaleria}>
+            <Ionicons name="images" size={24} color={COLORES.acento} />
+            <Text style={[estilos.botonTexto, { color: COLORES.acento }]}>Galería</Text>
           </TouchableOpacity>
         </View>
 
         {images.length > 0 && (
-          <>
-            <TouchableOpacity style={[estilos.botonSecundario, SOMBRAS.leve]} onPress={abrirRecortador}>
-              <Ionicons name="crop-outline" size={20} color={COLORES.azulOscuro} />
-              <Text style={estilos.botonSecundarioTexto}>Recortar Actual</Text>
+          <View style={estilos.accionesProcesamiento}>
+            <TouchableOpacity style={estilos.botonSecundario} onPress={abrirRecortador}>
+              <Ionicons name="crop" size={20} color={COLORES.acento} />
+              <Text style={estilos.botonSecundarioTexto}>Recortar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[estilos.botonProcesar, SOMBRAS.profunda]} onPress={procesarTodasLasImagenes}>
-              <Ionicons name="cloud-upload-outline" size={24} color={COLORES.blanco} />
-              <Text style={estilos.botonProcesarTexto}>Procesar Todas ({images.length})</Text>
+              <Ionicons name="checkmark-circle" size={24} color={COLORES.blanco} />
+              <Text style={estilos.botonProcesarTexto}>Procesar ({images.length})</Text>
             </TouchableOpacity>
-          </>
+          </View>
         )}
       </View>
 
@@ -214,12 +235,13 @@ export default function CapturadorScreen() {
         />
       )}
 
+      </ScrollView>
+
       <ProcessingStatus
         visible={processingVisible}
         state={processingState}
         onDismiss={() => {
           setProcessingVisible(false);
-          // Si todo fue exitoso, volver al inicio
           if (processingState.successful > 0 && processingState.total === processingState.successful) {
             router.replace('/inicio' as any);
           }
@@ -232,7 +254,15 @@ export default function CapturadorScreen() {
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    backgroundColor: COLORES.blanco,
+    backgroundColor: COLORES.fondoSecundario,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: ESPACIADO.lg,
+  },
+  carouselContainer: {
+    paddingHorizontal: ESPACIADO.lg,
+    marginVertical: ESPACIADO.lg,
   },
   header: {
     flexDirection: 'row',
@@ -246,8 +276,18 @@ const estilos = StyleSheet.create({
   },
   titulo: {
     fontSize: TIPOGRAFIA.tamanios.xl,
-    fontWeight: '600',
-    color: COLORES.azulOscuro,
+    fontWeight: '700',
+    color: COLORES.negro,
+  },
+  instrucciones: {
+    paddingHorizontal: ESPACIADO.lg,
+    paddingBottom: ESPACIADO.md,
+  },
+  instruccionTexto: {
+    fontSize: TIPOGRAFIA.tamanios.sm,
+    color: COLORES.textoMedio,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   botonesContainer: {
     paddingHorizontal: ESPACIADO.lg,
@@ -260,9 +300,9 @@ const estilos = StyleSheet.create({
   },
   botonAccion: {
     flex: 1,
-    backgroundColor: COLORES.azulClaro,
+    backgroundColor: COLORES.acento,
     paddingVertical: ESPACIADO.md,
-    borderRadius: RADIO.mediano,
+    borderRadius: RADIO.grande,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
@@ -271,37 +311,37 @@ const estilos = StyleSheet.create({
   botonTexto: {
     color: COLORES.blanco,
     fontSize: TIPOGRAFIA.tamanios.base,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  accionesProcesamiento: {
+    gap: ESPACIADO.sm,
+    marginTop: ESPACIADO.xs,
   },
   botonSecundario: {
-    backgroundColor: COLORES.blanco,
-    borderWidth: 1,
-    borderColor: COLORES.azulOscuro,
-    paddingVertical: ESPACIADO.md,
-    borderRadius: RADIO.mediano,
+    backgroundColor: 'transparent',
+    paddingVertical: ESPACIADO.sm,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   botonSecundarioTexto: {
-    color: COLORES.azulOscuro,
-    fontSize: TIPOGRAFIA.tamanios.base,
+    color: COLORES.acento,
+    fontSize: TIPOGRAFIA.tamanios.sm,
     fontWeight: '600',
   },
   botonProcesar: {
     backgroundColor: COLORES.exito,
-    paddingVertical: ESPACIADO.md,
-    borderRadius: RADIO.mediano,
+    paddingVertical: ESPACIADO.lg,
+    borderRadius: RADIO.grande,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: ESPACIADO.sm,
+    gap: 10,
   },
   botonProcesarTexto: {
     color: COLORES.blanco,
     fontSize: TIPOGRAFIA.tamanios.lg,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
