@@ -47,7 +47,6 @@ class GastosService {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
-        'ngrok-skip-browser-warning': 'true',
       },
     });
   }
@@ -197,15 +196,45 @@ class GastosService {
    * @param mes Mes (1-12)
    * @param anio Anio (YYYY)
    */
-  async solicitarReporte(mes: number, anio: number): Promise<void> {
+  async solicitarReporte(mes: number, anio: number, email?: string): Promise<void> {
     try {
       const cliente = await this.crearCliente();
-      await cliente.post(`/reportes/enviar-mensual/${mes}/${anio}`);
+      const url = `/reportes/enviar-mensual/${mes}/${anio}`;
+      console.log(`[GASTOS] Solicitando reporte: POST ${url} con email: ${email}`);
+      const respuesta = await cliente.post(url, { email });
+      console.log(`[GASTOS] Respuesta recibida:`, respuesta.status, respuesta.data);
     } catch (error: any) {
+      console.error(`[GASTOS] Error en solicitarReporte:`, error.response?.status, error.message, error.response?.data);
       throw new Error(
         error.response?.data?.message ||
-          'Error al solicitar reporte. Intenta mas tarde.'
+          'Error al solicitar reporte. Verifica si tienes gastos en este mes.'
       );
+    }
+  }
+
+  /**
+   * Enviar correo de prueba al email provisto (o al usuario autenticado si no se envia email)
+   */
+  async enviarReportePrueba(email?: string): Promise<void> {
+    try {
+      const cliente = await this.crearCliente();
+      await cliente.post(`/reportes/enviar-prueba`, { email });
+      return;
+    } catch (error: any) {
+      // Si falla por no autorizado o por problema de red, reintentar contra endpoint publico de depuracion
+      const status = error?.response?.status;
+      console.warn('[GASTOS] enviarReportePrueba fallo, status=', status, 'mensaje=', error?.message || error);
+
+      // Intentar endpoint público si disponibles
+      try {
+        await axios.post(API_ENDPOINTS.ENVIAR_REPORTE_PRUEBA_PUBLIC, { email });
+        return;
+      } catch (pubErr: any) {
+        console.error('[GASTOS] reintento publico fallo', pubErr?.response || pubErr);
+        throw new Error(
+          pubErr.response?.data?.message || error.response?.data?.message || 'Error al enviar correo de prueba. Intenta mas tarde.'
+        );
+      }
     }
   }
 }

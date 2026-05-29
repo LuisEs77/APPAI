@@ -9,6 +9,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +52,21 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [mesActual, setMesActual] = useState(new Date().getMonth() + 1);
   const [anioActual, setAnioActual] = useState(new Date().getFullYear());
+  const [enviandoReporte, setEnviandoReporte] = useState(false);
+
+  const showToast = (message: string) => {
+    try {
+      if (Platform.OS === 'android' && ToastAndroid) {
+        ToastAndroid.show(message, ToastAndroid.SHORT);
+      } else {
+        // Fallback: usar Alert para iOS/web
+        Alert.alert(message);
+      }
+    } catch (err) {
+      // Si algo falla con Toast, mostrar Alert
+      Alert.alert(message);
+    }
+  };
 
   const cargarRecibos = useCallback(async () => {
     try {
@@ -234,6 +251,76 @@ export default function HomeScreen() {
             />
           )}
         </View>
+        {/* Footer: Enviar reporte (no interfere con historial) */}
+        <View style={estilos.footerContainer} pointerEvents="box-none">
+          <TouchableOpacity
+            style={[estilos.btnVacio, { alignSelf: 'center' }]}
+            onPress={() => {
+              const confirmMessage = `¿Enviar reporte de ${meses[mesActual - 1]} ${anioActual}?`;
+              console.log('[UI] Enviar reporte clicked', { mesActual, anioActual, platform: Platform.OS });
+
+              const handleSend = async () => {
+                try {
+                  setEnviandoReporte(true);
+                  await haptics.impactAsync(haptics.ImpactFeedbackStyle.Medium);
+                  const emailUsuario = usuario?.email;
+                  console.log('[UI] Iniciando petición de reporte...', { mes: mesActual, anio: anioActual, email: emailUsuario });
+                  
+                  await gastosService.solicitarReporte(mesActual, anioActual, emailUsuario);
+                  
+                  console.log('[UI] Petición exitosa');
+                  showToast(`Reporte de ${meses[mesActual - 1]} enviado correctamente`);
+                } catch (err: any) {
+                  console.error('[UI] Error en la petición:', err);
+                  showToast(err.message || 'Error al enviar reporte');
+                } finally {
+                  setEnviandoReporte(false);
+                }
+              };
+
+              if (Platform.OS === 'web') {
+                // Fallback directo para web donde Alert.alert puede no ser confiable
+                if (window.confirm(confirmMessage)) {
+                  handleSend();
+                }
+              } else {
+                Alert.alert(
+                  'Enviar reporte',
+                  confirmMessage,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Enviar', onPress: handleSend },
+                  ],
+                  { cancelable: true }
+                );
+              }
+            }}
+            onLongPress={async () => {
+              // Handler directo sin confirmación para agilizar pruebas
+              try {
+                setEnviandoReporte(true);
+                await haptics.notificationAsync(haptics.NotificationFeedbackType.Success);
+                
+                console.log('[UI] Enviar reporte (LongPress) - Enviando reporte mensual', { mesActual, anioActual });
+
+                await gastosService.solicitarReporte(mesActual, anioActual);
+                showToast(`Reporte de ${meses[mesActual - 1]} enviado`);
+              } catch (err: any) {
+                console.error('[UI] Error enviando reporte (LongPress)', err);
+                showToast(err?.message || 'Error al enviar reporte');
+              } finally {
+                setEnviandoReporte(false);
+              }
+            }}
+            disabled={enviandoReporte}
+          >
+            {enviandoReporte ? (
+              <ActivityIndicator color={COLORES.negro} />
+            ) : (
+              <Text style={estilos.btnVacioTexto}>Enviar reporte</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -315,7 +402,7 @@ const estilos = StyleSheet.create({
     marginBottom: ESPACIADO.md,
   },
   listaContent: {
-    paddingBottom: ESPACIADO.xl,
+    paddingBottom: ESPACIADO.xl + 120,
   },
   tarjetaRecibo: {
     flexDirection: 'row',
@@ -385,9 +472,22 @@ const estilos = StyleSheet.create({
     paddingHorizontal: ESPACIADO.lg,
     paddingVertical: ESPACIADO.md,
     borderRadius: RADIO.grande,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   btnVacioTexto: {
     color: COLORES.negro,
     fontWeight: '700',
+    fontSize: TIPOGRAFIA.tamanios.base,
+    textAlign: 'center',
+  },
+  footerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 90, // Elevado para no quedar detrás de la TabBar (altura ~70-80)
+    alignItems: 'center',
+    paddingHorizontal: ESPACIADO.lg,
+    zIndex: 10,
   },
 });

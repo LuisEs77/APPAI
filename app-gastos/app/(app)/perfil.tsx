@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 
 import { useAutenticacion } from '@/hooks/use-autenticacion';
+import { EmailModal } from '@/components/auth/email-modal';
 import { useHaptics } from '@/hooks/use-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORES, ESPACIADO, TIPOGRAFIA, RADIO, SOMBRAS } from '@/constants/colores';
 import { TEXTOS } from '@/constants/textos';
 
 export default function PerfilScreen() {
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
   const { usuario, cerrarSesion } = useAutenticacion();
   const haptics = useHaptics();
+
+  
 
   const handleCerrarSesion = async () => {
     haptics.notificationAsync(haptics.NotificationFeedbackType.Warning);
@@ -33,6 +37,8 @@ export default function PerfilScreen() {
           <Text style={estilos.email}>{usuario?.email}</Text>
         </View>
 
+
+
         {/* Sección de Información */}
         <View style={estilos.seccion}>
           <Text style={estilos.tituloSeccion}>Mi Cuenta</Text>
@@ -44,13 +50,16 @@ export default function PerfilScreen() {
                 <Text style={estilos.valorItem}>{usuario?.nombre}</Text>
               </View>
             </View>
-            <View style={[estilos.itemInfo, estilos.borderTop]}>
+            <TouchableOpacity
+              style={[estilos.itemInfo, estilos.borderTop]}
+              onPress={() => setEmailModalVisible(true)}
+            >
               <Ionicons name="mail-outline" size={20} color={COLORES.acento} />
               <View style={estilos.textoItem}>
                 <Text style={estilos.labelItem}>Correo Electrónico</Text>
                 <Text style={estilos.valorItem}>{usuario?.email}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -80,6 +89,7 @@ export default function PerfilScreen() {
         
         <Text style={estilos.version}>Versión 1.0.0 (APPAI)</Text>
       </ScrollView>
+      <EmailModal visible={emailModalVisible} onClose={() => setEmailModalVisible(false)} />
     </SafeAreaView>
   );
 }
@@ -199,6 +209,20 @@ const estilos = StyleSheet.create({
     color: COLORES.error,
     fontSize: TIPOGRAFIA.tamanios.base,
     fontWeight: '700',
+  },
+  cta: {
+    marginVertical: ESPACIADO.md,
+    backgroundColor: COLORES.acento,
+    paddingVertical: ESPACIADO.md,
+    borderRadius: RADIO.completo,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SOMBRAS.media,
+  },
+  ctaText: {
+    color: COLORES.negro,
+    fontSize: TIPOGRAFIA.tamanios.base,
+    fontWeight: '800',
   },
   version: {
     textAlign: 'center',

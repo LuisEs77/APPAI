@@ -64,7 +64,8 @@ export const FormularioLogin: React.FC = () => {
 
     try {
       await iniciarSesion(email, contraseña);
-      // La navegación se maneja automáticamente en el contexto
+      // Navegar a la pantalla de inicio cuando el login es exitoso
+      router.replace('/(app)/inicio' as any);
     } catch (err) {
       Alert.alert(
         'Error al iniciar sesion',

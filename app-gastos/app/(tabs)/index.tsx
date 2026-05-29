@@ -16,9 +16,10 @@ import { ImageCarousel } from '../../components/image-carousel';
 import { CropModal } from '../../components/crop-modal';
 import { ProcessingStatus } from '../../components/processing-status';
 import uuid from 'react-native-uuid';
+import { API_ENDPOINTS } from '@/constants/api-endpoints';
 
-// Asegúrate de que esta URL no tenga ".app" al final y apunte a tu Ngrok
-const URL_BACKEND = 'https://vintage-visitor-wrench.ngrok-free.dev/gastos';
+// Backend base para operaciones de gastos — usa el `API_ENDPOINTS` configurado
+const URL_BACKEND = `${API_ENDPOINTS.BASE}/gastos`;
 
 interface ImageItem {
   uri: string;

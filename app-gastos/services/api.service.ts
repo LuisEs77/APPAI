@@ -18,9 +18,12 @@ class ServicioApi {
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
       },
     });
+
+    // Debug: mostrar base usada por axios
+    // eslint-disable-next-line no-console
+    console.log('[servicioApi] baseURL =', this.baseUrl);
 
     // Interceptor para agregar token JWT a cada solicitud
     this.cliente.interceptors.request.use(

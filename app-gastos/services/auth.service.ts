@@ -40,9 +40,13 @@ class AuthService {
     baseURL: API_ENDPOINTS.BASE,
     timeout: 30000,
     headers: {
-      'ngrok-skip-browser-warning': 'true',
+      'Content-Type': 'application/json',
     },
   });
+
+  // Debug
+  // eslint-disable-next-line no-console
+  private _log = console.log.bind(console, '[AuthService] base =', API_ENDPOINTS.BASE);
 
   /**
    * Iniciar sesion con email y password

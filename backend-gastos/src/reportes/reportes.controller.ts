@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Body,
   Param,
   UseGuards,
   Request,
@@ -11,6 +12,7 @@ import {
 import { ReportesService } from './reportes.service';
 import { JwtGuard } from '../guards/jwt.guard';
 import { UsuariosService } from '../usuarios/usuarios.service';
+import { EnviarReporteDto } from './dto/enviar-reporte.dto';
 
 /**
  * Controlador de Reportes
@@ -28,6 +30,7 @@ export class ReportesController {
    * POST /reportes/enviar-mensual/:mes/:anio - Generar y enviar reporte por correo
    * @param mes Mes del reporte (1-12)
    * @param anio Anio del reporte (YYYY)
+   * @param body Datos del reporte (email opcional)
    * @param request Request con usuario autenticado
    */
   @Post('enviar-mensual/:mes/:anio')
@@ -35,6 +38,7 @@ export class ReportesController {
   async enviarReporteMensual(
     @Param('mes') mes: string,
     @Param('anio') anio: string,
+    @Body() enviarReporteDto: EnviarReporteDto,
     @Request() request: any,
   ): Promise<{ mensaje: string; enviado: boolean }> {
     const mesNum = parseInt(mes, 10);
@@ -50,10 +54,13 @@ export class ReportesController {
     try {
       // Obtener datos del usuario para envio de email
       const usuario = await this.usuariosService.obtenerPorId(request.user.id);
+      
+      // Usar el email del DTO si se proporciona, sino usar el del usuario
+      const emailDestino = enviarReporteDto.email || usuario.email;
 
       // Enviar reporte por correo
       await this.reportesService.enviarReporteMensual(
-        usuario.email,
+        emailDestino,
         usuario.nombre,
         mesNum,
         anioNum,
@@ -61,13 +68,39 @@ export class ReportesController {
       );
 
       return {
-        mensaje: `Reporte enviado exitosamente a ${usuario.email}`,
+        mensaje: `Reporte enviado exitosamente a ${emailDestino}`,
         enviado: true,
       };
     } catch (error) {
       throw new BadRequestException(
         `Error al enviar reporte: ${error.message}`,
       );
+    }
+  }
+
+  /**
+   * POST /reportes/enviar-prueba - Enviar un correo de prueba al usuario autenticado o al email provisto en body
+   */
+  @Post('enviar-prueba')
+  @HttpCode(HttpStatus.OK)
+  async enviarCorreoPrueba(
+    @Body() enviarReporteDto: EnviarReporteDto,
+    @Request() request: any,
+  ): Promise<{ mensaje: string; enviado: boolean }> {
+    try {
+      console.log(`[REPORTES] POST /api/reportes/enviar-prueba called by user=${request?.user?.id} bodyEmail=${enviarReporteDto.email}`);
+      const usuario = await this.usuariosService.obtenerPorId(request.user.id);
+      const emailDestino = enviarReporteDto.email || usuario.email;
+      console.log(`[REPORTES] Will send test email to ${emailDestino}`);
+
+      await this.reportesService.enviarCorreoPrueba(emailDestino, usuario.nombre || '');
+
+      return {
+        mensaje: `Correo de prueba enviado a ${emailDestino}`,
+        enviado: true,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Error al enviar correo de prueba: ${error.message}`);
     }
   }
 }

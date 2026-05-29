@@ -2,8 +2,10 @@
  * Configuracion de endpoints del API backend
  */
 
-// URL del tunel ngrok proporcionada por el usuario
-const API_BASE_URL = 'https://vintage-visitor-wrench.ngrok-free.dev/api';
+// Base del API. Se puede sobrescribir con la variable de entorno `EXPO_PUBLIC_API_BASE`.
+const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) ||
+  'http://localhost:3000/api';
 
 export const API_ENDPOINTS = {
   // Base
@@ -33,4 +35,14 @@ export const API_ENDPOINTS = {
   // Reportes
   GENERAR_REPORTE: (mes: number, anio: number) =>
     `${API_BASE_URL}/reportes/enviar-mensual/${mes}/${anio}`,
+  ENVIAR_REPORTE_PRUEBA: `${API_BASE_URL}/reportes/enviar-prueba`,
+  ENVIAR_REPORTE_PRUEBA_PUBLIC: `${API_BASE_URL}/reportes/enviar-prueba-public`,
 };
+
+// Log de depuración en tiempo de ejecución para verificar la URL base
+try {
+  // eslint-disable-next-line no-console
+  console.log('[API_ENDPOINTS] BASE =', API_ENDPOINTS.BASE);
+} catch (err) {
+  // ignore
+}

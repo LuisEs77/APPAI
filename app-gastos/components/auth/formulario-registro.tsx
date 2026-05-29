@@ -82,6 +82,9 @@ export const FormularioRegistro: React.FC = () => {
 
     try {
       await registrarse(email, contraseña, nombre, apellido);
+      Alert.alert('Cuenta creada', 'Tu cuenta se ha creado correctamente', [
+        { text: 'OK', onPress: () => router.push('/' as any) },
+      ]);
     } catch (err) {
       Alert.alert(
         'Error al registrarse',
