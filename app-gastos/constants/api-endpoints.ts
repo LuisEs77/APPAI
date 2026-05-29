@@ -2,10 +2,14 @@
  * Configuracion de endpoints del API backend
  */
 
-// Base del API. Se puede sobrescribir con la variable de entorno `EXPO_PUBLIC_API_BASE`.
-const API_BASE_URL =
-  (typeof process !== 'undefined' && process.env && process.env.EXPO_PUBLIC_API_BASE) ||
-  'http://localhost:3000/api';
+// Base del API. Se prefiere la variable de entorno `EXPO_PUBLIC_API_BASE`.
+const envBase = typeof process !== 'undefined' && process.env ? process.env.EXPO_PUBLIC_API_BASE : null;
+
+if (!envBase) {
+  console.warn('[API_ENDPOINTS] EXPO_PUBLIC_API_BASE no está definida. Usando localhost por defecto.');
+}
+
+const API_BASE_URL = envBase || 'http://localhost:3000/api';
 
 export const API_ENDPOINTS = {
   // Base
