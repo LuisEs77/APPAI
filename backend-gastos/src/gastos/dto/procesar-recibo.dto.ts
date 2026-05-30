@@ -6,7 +6,7 @@ import { IsString, IsNotEmpty, IsArray, ArrayMinSize } from 'class-validator';
 export class ProcesarReciboDto {
   @IsString()
   @IsNotEmpty({ message: 'La imagen en base64 no puede estar vacía.' })
-  image: string;
+  imagenBase64: string;
 }
 
 /**

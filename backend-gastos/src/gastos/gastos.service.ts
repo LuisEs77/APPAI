@@ -10,6 +10,8 @@ import { Repository } from 'typeorm';
 import { IaService } from '../ia/ia.service';
 import { Recibo } from './entities/recibo.entity';
 import * as ExcelJS from 'exceljs';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import FormData from 'form-data';
 import axios from 'axios';
 
@@ -98,7 +100,7 @@ export class GastosService {
       },
     };
 
-    // Procesar secuencialmente para evitar saturar la IA (Ollama)
+    // Procesar secuencialmente para evitar saturar la IA
     for (let i = 0; i < imagenes.length; i++) {
       try {
         const recibo = await this.procesarFactura(usuarioId, imagenes[i]);
@@ -140,6 +142,7 @@ export class GastosService {
 
     // Aplicar filtros
     if (filtros?.fechaInicio && filtros?.fechaFin) {
+      this.logger.debug(`Filtrando por fecha: ${filtros.fechaInicio} hasta ${filtros.fechaFin}`);
       query.andWhere('recibo.fecha BETWEEN :fechaInicio AND :fechaFin', {
         fechaInicio: filtros.fechaInicio,
         fechaFin: filtros.fechaFin,
@@ -154,7 +157,9 @@ export class GastosService {
 
     query.orderBy('recibo.fecha', 'DESC');
 
-    return await query.getMany();
+    const resultados = await query.getMany();
+    this.logger.debug(`Recibos encontrados para usuario ${usuarioId}: ${resultados.length}`);
+    return resultados;
   }
 
   /**
@@ -192,10 +197,11 @@ export class GastosService {
     mes: number,
     anio: number,
   ): Promise<any> {
-    // Construir fechas del mes
-    const fechaInicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
-    const fechaFin = new Date(anio, mes, 0);
-    const fechaFinStr = fechaFin.toISOString().split('T')[0];
+    // Construir fechas del mes de forma robusta
+    const mesPad = String(mes).padStart(2, '0');
+    const fechaInicio = `${anio}-${mesPad}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const fechaFinStr = `${anio}-${mesPad}-${String(ultimoDia).padStart(2, '0')}`;
 
     const recibos = await this.obtenerRecibos(usuarioId, {
       fechaInicio,
@@ -259,10 +265,11 @@ export class GastosService {
       `Generando reporte Excel para usuario ${usuarioId} (${anio}-${mes})`,
     );
 
-    // Obtener recibos del periodo
-    const fechaInicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
-    const fechaFin = new Date(anio, mes, 0);
-    const fechaFinStr = fechaFin.toISOString().split('T')[0];
+    // Obtener recibos del periodo de forma robusta
+    const mesPad = String(mes).padStart(2, '0');
+    const fechaInicio = `${anio}-${mesPad}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const fechaFinStr = `${anio}-${mesPad}-${String(ultimoDia).padStart(2, '0')}`;
 
     const recibos = await this.obtenerRecibos(usuarioId, {
       fechaInicio,
@@ -311,6 +318,71 @@ export class GastosService {
 
     // Convertir a buffer
     return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
+  }
+
+  /**
+   * Generar reporte PDF para usuario
+   * @param usuarioId ID del usuario
+   * @param mes Mes del reporte
+   * @param anio Anio del reporte
+   * @param nombreUsuario Nombre para el encabezado
+   * @returns Buffer con archivo PDF
+   */
+  async generarReportePDF(
+    usuarioId: string,
+    mes: number,
+    anio: number,
+    nombreUsuario: string,
+  ): Promise<Buffer> {
+    this.logger.log(`Generando reporte PDF para usuario ${usuarioId} (${anio}-${mes})`);
+
+    // Obtener recibos del periodo de forma robusta
+    const mesPad = String(mes).padStart(2, '0');
+    const fechaInicio = `${anio}-${mesPad}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const fechaFinStr = `${anio}-${mesPad}-${String(ultimoDia).padStart(2, '0')}`;
+
+    const recibos = await this.obtenerRecibos(usuarioId, {
+      fechaInicio,
+      fechaFin: fechaFinStr,
+    });
+
+    const doc = new jsPDF();
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const mesNombre = meses[mes - 1];
+
+    // Encabezado
+    doc.setFontSize(20);
+    doc.setTextColor(0, 51, 102);
+    doc.text('Reporte Mensual de Gastos', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Usuario: ${nombreUsuario}`, 20, 35);
+    doc.text(`Periodo: ${mesNombre} ${anio}`, 20, 42);
+    doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 20, 49);
+
+    // Tabla de datos
+    const filas = recibos.map(r => [
+      r.fecha,
+      r.comercio,
+      r.categoria,
+      `Q${Number(r.total).toFixed(2)}`
+    ]);
+
+    const totalGastado = recibos.reduce((sum, r) => sum + Number(r.total), 0);
+    filas.push(['', '', 'TOTAL', `Q${totalGastado.toFixed(2)}`]);
+
+    (doc as any).autoTable({
+      startY: 60,
+      head: [['Fecha', 'Comercio', 'Categoría', 'Monto']],
+      body: filas,
+      headStyles: { fillColor: [0, 51, 102], textColor: [255, 255, 255] },
+      footStyles: { fillColor: [230, 242, 255], textColor: [0, 51, 102], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    return Buffer.from(doc.output('arraybuffer'));
   }
 
   /**

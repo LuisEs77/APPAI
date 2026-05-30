@@ -35,20 +35,27 @@ export class ReportesService {
         `Generando reporte para ${emailDestino} (${anio}-${mes})`,
       );
 
-      // 1. Obtener estadísticas para incluir el Total Gastado
-      const estadisticas = await this.gastosService.obtenerEstadisticas(
-        usuarioId,
-        mes,
-        anio,
-      );
-      const totalGastado = estadisticas.totalGastado;
+      // 1. Obtener gastos y estadísticas
+      const mesPad = String(mes).padStart(2, '0');
+      const fechaInicio = `${anio}-${mesPad}-01`;
+      const ultimoDia = new Date(anio, mes, 0).getDate();
+      const fechaFinStr = `${anio}-${mesPad}-${String(ultimoDia).padStart(2, '0')}`;
 
-      // 2. Generar archivo Excel
-      const bufferExcel = await this.gastosService.generarReporteExcel(
-        usuarioId,
-        mes,
-        anio,
-      );
+      this.logger.log(`Filtrando gastos desde ${fechaInicio} hasta ${fechaFinStr} para usuario ${usuarioId}`);
+
+      const recibos = await this.gastosService.obtenerRecibos(usuarioId, {
+        fechaInicio,
+        fechaFin: fechaFinStr,
+      });
+
+      this.logger.log(`Recibos encontrados para el periodo: ${recibos.length}`);
+      
+      if (recibos.length > 0) {
+        this.logger.log(`Primer recibo: ${recibos[0].comercio} - ${recibos[0].fecha} - Q${recibos[0].total}`);
+      }
+
+      // Calcular estadísticas localmente para evitar doble consulta a la BD
+      const totalGastado = recibos.reduce((sum, r) => sum + Number(r.total), 0);
 
       // Preparar informacion del mes/anio en texto legible
       const meses = [
@@ -68,8 +75,8 @@ export class ReportesService {
       const mesNombre = meses[mes - 1];
 
       // Preparar opciones comunes
-      const asunto = `Reporte de Gastos - ${mesNombre} ${anio}`;
-      const html = this.generarHtmlEmail(nombreUsuario, mesNombre, anio, totalGastado);
+      const asunto = `Resumen de Gastos - ${mesNombre} ${anio}`;
+      const html = this.generarHtmlEmail(nombreUsuario, mesNombre, anio, totalGastado, recibos);
 
       // Enviar exclusivamente por EmailJS REST (requerido en .env):
       const emailjsConfigured =
@@ -81,9 +88,6 @@ export class ReportesService {
         );
       }
 
-      // IMPORTANTE: Para enviar adjuntos con la API REST de EmailJS, 
-      // el archivo debe ir DENTRO de template_params como una variable
-      // que debe estar configurada en el Dashboard de EmailJS como "Variable Attachment".
       const payload: any = {
         service_id: process.env.EMAILJS_SERVICE_ID,
         template_id: process.env.EMAILJS_TEMPLATE_ID,
@@ -93,13 +97,11 @@ export class ReportesService {
           name: nombreUsuario,
           email: emailDestino,
           subject: asunto,
-          message: `Adjunto tu reporte de ${mesNombre} ${anio}. Total gastado: Q${totalGastado.toFixed(2)}`,
+          message: `Aquí tienes el detalle de tus gastos de ${mesNombre} ${anio}. Total gastado: Q${totalGastado.toFixed(2)}`,
           html,
           total_gastado: `Q${totalGastado.toFixed(2)}`,
           mes_reporte: mesNombre,
           anio_reporte: anio.toString(),
-          // Se envía el base64 sin el prefijo data: si se configura como Variable Attachment
-          reporte_excel: bufferExcel ? bufferExcel.toString('base64') : null,
         },
       };
 
@@ -133,6 +135,7 @@ export class ReportesService {
    * @param mes Nombre del mes
    * @param anio Anio
    * @param total Gastado
+   * @param recibos Lista de recibos detallados
    * @returns HTML formateado
    */
   private generarHtmlEmail(
@@ -140,52 +143,82 @@ export class ReportesService {
     mes: string,
     anio: number,
     total: number,
+    recibos: any[],
   ): string {
+    const filasTabla = recibos
+      .map(
+        (r) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.fecha}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.comercio}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.categoria}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">Q${Number(
+          r.total,
+        ).toFixed(2)}</td>
+      </tr>
+    `,
+      )
+      .join('');
+
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="UTF-8">
           <style>
-            body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
             .header { background-color: #003366; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
             .header h1 { margin: 0; font-size: 24px; }
             .content { padding: 20px; }
             .content p { color: #333; line-height: 1.6; }
-            .total-destacado { background-color: #e6f2ff; padding: 15px; border-left: 5px solid #0055AA; margin: 20px 0; font-size: 18px; color: #003366; }
+            .total-destacado { background-color: #e6f2ff; padding: 15px; border-left: 5px solid #0055AA; margin: 20px 0; font-size: 18px; color: #003366; text-align: center; }
+            .detalle-tabla { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            .detalle-tabla th { background-color: #f8f9fa; color: #003366; text-align: left; padding: 10px; border-bottom: 2px solid #003366; }
             .footer { text-align: center; color: #999; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
-            .button { display: inline-block; background-color: #0055AA; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; margin-top: 10px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>Reporte de Gastos</h1>
+              <h1>Resumen de Gastos</h1>
               <p>${mes} ${anio}</p>
             </div>
             <div class="content">
               <p>Hola <strong>${nombreUsuario}</strong>,</p>
-              <p>Te enviamos tu reporte de gastos del mes de <strong>${mes} ${anio}</strong>.</p>
+              <p>Este es el resumen detallado de tus gastos realizados en <strong>${mes} ${anio}</strong>.</p>
               
               <div class="total-destacado">
                 Total Gastado: <strong>Q${total.toFixed(2)}</strong>
               </div>
 
-              <p>El archivo Excel adjunto contiene el historial detallado de todas tus transacciones, incluyendo:</p>
-              <ul>
-                <li>Fecha de cada compra</li>
-                <li>Comercio o tienda</li>
-                <li>Categoria del gasto</li>
-                <li>Monto en Quetzales (Q)</li>
-                <li>Total mensual</li>
-              </ul>
-              <p>Descarga el archivo para analizar tus gastos en detalle.</p>
-              <p>Si tienes dudas o necesitas ayuda, contactanos.</p>
+              <table class="detalle-tabla">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Comercio</th>
+                    <th>Categoría</th>
+                    <th style="text-align: right;">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filasTabla}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3" style="padding: 10px; text-align: right; font-weight: bold;">TOTAL:</td>
+                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #0055AA;">Q${total.toFixed(
+                      2,
+                    )}</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <p style="margin-top: 30px;">Si tienes dudas o necesitas ayuda con el registro de tus gastos, no dudes en contactarnos.</p>
               <p>Saludos,<br/>El equipo de Control de Gastos</p>
             </div>
             <div class="footer">
-              <p>Este es un mensaje automatico. Por favor no respondas a este correo.</p>
+              <p>Este es un mensaje automático enviado desde tu aplicación de Control de Gastos. Por favor no respondas a este correo.</p>
             </div>
           </div>
         </body>

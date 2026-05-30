@@ -15,6 +15,7 @@ import {
 import { GastosService } from './gastos.service';
 import { JwtGuard } from '../guards/jwt.guard';
 import { Recibo } from './entities/recibo.entity';
+import { ProcesarMultiplesRecibosDto, ProcesarReciboDto } from './dto/procesar-recibo.dto';
 
 /**
  * Controlador de Gastos (Recibos)
@@ -35,15 +36,9 @@ export class GastosController {
   @Post('procesar')
   @HttpCode(HttpStatus.CREATED)
   async procesar(
-    @Body() cuerpo: { imagenBase64: string },
+    @Body() cuerpo: ProcesarReciboDto,
     @Request() request: any,
   ): Promise<Recibo> {
-    if (!cuerpo.imagenBase64) {
-      throw new BadRequestException(
-        'Debe proporcionar imagenBase64 en el cuerpo',
-      );
-    }
-
     return await this.gastosService.procesarFactura(
       request.user.id,
       cuerpo.imagenBase64,
@@ -59,15 +54,9 @@ export class GastosController {
   @Post('procesar-multiples')
   @HttpCode(HttpStatus.OK)
   async procesarMultiples(
-    @Body() cuerpo: { images: string[] },
+    @Body() cuerpo: ProcesarMultiplesRecibosDto,
     @Request() request: any,
   ): Promise<any> {
-    if (!cuerpo.images || !Array.isArray(cuerpo.images)) {
-      throw new BadRequestException(
-        'Debe proporcionar un array "images" en el cuerpo',
-      );
-    }
-
     return await this.gastosService.procesarMultiplesFacturas(
       request.user.id,
       cuerpo.images,

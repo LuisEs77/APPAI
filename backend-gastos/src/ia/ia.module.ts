@@ -5,7 +5,7 @@ import { IaController } from './ia.controller';
 
 /**
  * Modulo de IA
- * Configura integracion con Ollama para procesamiento de facturas
+ * Configura integracion con IA para procesamiento de facturas
  */
 @Module({
   imports: [HttpModule],

@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import { API_ENDPOINTS } from '@/constants/api-endpoints';
-import { servicioAlmacenamiento } from './almacenamiento';
+import { servicioApi } from './api.service';
 
 export interface Recibo {
   id: string;
@@ -34,23 +34,6 @@ export interface Estadisticas {
 }
 
 class GastosService {
-  private baseUrl = API_ENDPOINTS.BASE;
-
-  /**
-   * Crear cliente axios con autenticacion
-   */
-  private async crearCliente() {
-    const token = await servicioAlmacenamiento.obtenerString('token');
-    return axios.create({
-      baseURL: this.baseUrl,
-      timeout: 60000, // Mayor timeout para procesamiento IA
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  }
-
   /**
    * Procesar una factura
    * @param imagenBase64 Imagen en formato base64
@@ -58,11 +41,9 @@ class GastosService {
    */
   async procesarFactura(imagenBase64: string): Promise<Recibo> {
     try {
-      const cliente = await this.crearCliente();
-      const respuesta = await cliente.post<Recibo>('/gastos/procesar', {
+      return await servicioApi.enviar<Recibo>(API_ENDPOINTS.PROCESAR_FACTURA, {
         imagenBase64,
       });
-      return respuesta.data;
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
@@ -78,11 +59,12 @@ class GastosService {
    */
   async procesarMultiplesFacturas(images: string[]): Promise<any> {
     try {
-      const cliente = await this.crearCliente();
-      const respuesta = await cliente.post('/gastos/procesar-multiples', {
-        images,
-      });
-      return respuesta.data;
+      return await servicioApi.enviar<any>(
+        API_ENDPOINTS.BASE + '/gastos/procesar-multiples',
+        {
+          images,
+        }
+      );
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
@@ -93,23 +75,21 @@ class GastosService {
 
   /**
    * Obtener todos los recibos del usuario
-
    * @param filtros Filtros opcionales
    * @returns Lista de recibos
    */
   async obtenerRecibos(filtros?: FiltrosRecibos): Promise<Recibo[]> {
     try {
-      const cliente = await this.crearCliente();
       const params = new URLSearchParams();
 
       if (filtros?.fechaInicio) params.append('fechaInicio', filtros.fechaInicio);
       if (filtros?.fechaFin) params.append('fechaFin', filtros.fechaFin);
       if (filtros?.categoria) params.append('categoria', filtros.categoria);
 
-      const respuesta = await cliente.get<Recibo[]>(
-        `/gastos?${params.toString()}`
-      );
-      return respuesta.data;
+      const url = `${API_ENDPOINTS.OBTENER_RECIBOS}${
+        params.toString() ? '?' + params.toString() : ''
+      }`;
+      return await servicioApi.obtener<Recibo[]>(url);
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Error al obtener recibos.'
@@ -124,9 +104,9 @@ class GastosService {
    */
   async obtenerRecibo(reciboId: string): Promise<Recibo> {
     try {
-      const cliente = await this.crearCliente();
-      const respuesta = await cliente.get<Recibo>(`/gastos/${reciboId}`);
-      return respuesta.data;
+      return await servicioApi.obtener<Recibo>(
+        API_ENDPOINTS.OBTENER_RECIBO(reciboId)
+      );
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Error al obtener el recibo.'
@@ -142,11 +122,9 @@ class GastosService {
    */
   async obtenerEstadisticas(mes: number, anio: number): Promise<Estadisticas> {
     try {
-      const cliente = await this.crearCliente();
-      const respuesta = await cliente.get<Estadisticas>(
-        `/gastos/estadisticas/${mes}/${anio}`
+      return await servicioApi.obtener<Estadisticas>(
+        API_ENDPOINTS.OBTENER_ESTADISTICAS(mes, anio)
       );
-      return respuesta.data;
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Error al obtener estadisticas.'
@@ -160,8 +138,7 @@ class GastosService {
    */
   async eliminarRecibo(reciboId: string): Promise<void> {
     try {
-      const cliente = await this.crearCliente();
-      await cliente.delete(`/gastos/${reciboId}`);
+      await servicioApi.eliminar(API_ENDPOINTS.ELIMINAR_RECIBO(reciboId));
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Error al eliminar el recibo.'
@@ -176,13 +153,11 @@ class GastosService {
    */
   async descargarReporte(mes: number, anio: number): Promise<Blob> {
     try {
-      const cliente = await this.crearCliente();
-      const respuesta = await cliente.get(
-        `/reportes/descargar/${mes}/${anio}`,
-        {
-          responseType: 'blob',
-        }
-      );
+      const cliente = servicioApi.getCliente();
+      const url = API_ENDPOINTS.BASE + `/reportes/descargar/${mes}/${anio}`;
+      const respuesta = await cliente.get(url, {
+        responseType: 'blob',
+      });
       return respuesta.data;
     } catch (error: any) {
       throw new Error(
@@ -198,11 +173,9 @@ class GastosService {
    */
   async solicitarReporte(mes: number, anio: number, email?: string): Promise<void> {
     try {
-      const cliente = await this.crearCliente();
-      const url = `/reportes/enviar-mensual/${mes}/${anio}`;
+      const url = API_ENDPOINTS.GENERAR_REPORTE(mes, anio);
       console.log(`[GASTOS] Solicitando reporte: POST ${url} con email: ${email}`);
-      const respuesta = await cliente.post(url, { email });
-      console.log(`[GASTOS] Respuesta recibida:`, respuesta.status, respuesta.data);
+      await servicioApi.enviar(url, { email });
     } catch (error: any) {
       console.error(`[GASTOS] Error en solicitarReporte:`, error.response?.status, error.message, error.response?.data);
       throw new Error(
@@ -217,8 +190,7 @@ class GastosService {
    */
   async enviarReportePrueba(email?: string): Promise<void> {
     try {
-      const cliente = await this.crearCliente();
-      await cliente.post(`/reportes/enviar-prueba`, { email });
+      await servicioApi.enviar(API_ENDPOINTS.ENVIAR_REPORTE_PRUEBA, { email });
       return;
     } catch (error: any) {
       // Si falla por no autorizado o por problema de red, reintentar contra endpoint publico de depuracion
@@ -227,7 +199,10 @@ class GastosService {
 
       // Intentar endpoint público si disponibles
       try {
-        await axios.post(API_ENDPOINTS.ENVIAR_REPORTE_PRUEBA_PUBLIC, { email });
+        const clientePublico = axios.create({
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        await clientePublico.post(API_ENDPOINTS.ENVIAR_REPORTE_PRUEBA_PUBLIC, { email });
         return;
       } catch (pubErr: any) {
         console.error('[GASTOS] reintento publico fallo', pubErr?.response || pubErr);

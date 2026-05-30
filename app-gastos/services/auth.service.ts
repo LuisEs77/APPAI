@@ -3,9 +3,9 @@
  * Maneja login, registro y gestion de sesion
  */
 
-import axios from 'axios';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { servicioAlmacenamiento } from './almacenamiento';
+import { servicioApi } from './api.service';
 
 export interface Usuario {
   id: string;
@@ -36,18 +36,6 @@ export interface RegistroDto {
 }
 
 class AuthService {
-  private cliente = axios.create({
-    baseURL: API_ENDPOINTS.BASE,
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  // Debug
-  // eslint-disable-next-line no-console
-  private _log = console.log.bind(console, '[AuthService] base =', API_ENDPOINTS.BASE);
-
   /**
    * Iniciar sesion con email y password
    * @param email Email del usuario
@@ -56,8 +44,8 @@ class AuthService {
    */
   async login(email: string, password: string): Promise<RespuestaAuth> {
     try {
-      const respuesta = await this.cliente.post<RespuestaAuth>(
-        '/auth/login',
+      const respuesta = await servicioApi.getCliente().post<RespuestaAuth>(
+        API_ENDPOINTS.LOGIN,
         { email, password }
       );
 
@@ -81,8 +69,8 @@ class AuthService {
    */
   async registrarse(datos: RegistroDto): Promise<RespuestaAuth> {
     try {
-      const respuesta = await this.cliente.post<RespuestaAuth>(
-        '/auth/registro',
+      const respuesta = await servicioApi.getCliente().post<RespuestaAuth>(
+        API_ENDPOINTS.REGISTRO,
         datos
       );
 
