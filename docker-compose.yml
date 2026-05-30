@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Base de Datos PostgreSQL
+  database:
+    image: postgres:15-alpine
+    container_name: gastos-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-gastos_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Backend (NestJS)
+  backend:
+    build:
+      context: ./backend-gastos
+      dockerfile: Dockerfile
+    container_name: gastos-backend
+    restart: always
+    depends_on:
+      - database
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-gastos_db}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-7d}
+      - IA_API_URL=${IA_API_URL}
+      - IA_MODEL=${IA_MODEL}
+      - EMAILJS_SERVICE_ID=${EMAILJS_SERVICE_ID}
+      - EMAILJS_TEMPLATE_ID=${EMAILJS_TEMPLATE_ID}
+      - EMAILJS_PUBLIC_KEY=${EMAILJS_PUBLIC_KEY}
+      - EMAILJS_ACCESS_TOKEN=${EMAILJS_ACCESS_TOKEN}
+    ports:
+      - "${PORT:-3000}:3000"
+    networks:
+      - app-network
+
+  # Frontend (Expo Web)
+  frontend:
+    build:
+      context: ./app-gastos
+      dockerfile: Dockerfile
+    container_name: gastos-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      - EXPO_PUBLIC_API_URL=http://localhost:3000/api
+    ports:
+      - "8081:8081"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
